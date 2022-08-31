@@ -139,7 +139,7 @@ func ReportUpdate(pollduration int, reportduration int) {
 					if err != nil {
 						fmt.Println(err)
 					}
-					defer response.Body.Close()
+					response.Body.Close()
 					// печатаем код ответа
 					fmt.Println("Статус-код ", response.Status)
 					
