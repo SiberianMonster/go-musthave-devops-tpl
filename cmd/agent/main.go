@@ -131,11 +131,15 @@ func ReportUpdate(pollduration int, reportduration int) {
 					fmt.Printf("Encoded URL is %q\n", url.String())
 					client := &http.Client{}
 					request, err := http.NewRequest("POST", url.String(), nil)
+					if err != nil {
+						fmt.Println(err)
+					}
 					request.Header.Set("Content-Type", "text/plain")
 					response, err := client.Do(request)
 					if err != nil {
 						fmt.Println(err)
 					}
+					defer response.Body.Close()
 					// печатаем код ответа
 					fmt.Println("Статус-код ", response.Status)
 					
