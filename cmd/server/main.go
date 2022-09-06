@@ -73,13 +73,12 @@ func stringInSlice(a string, list []string) bool {
 
 func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, error) {
 
-	var v reflect.Value
-	v = reflect.ValueOf(mp)
-	var new_value float64
-	var new_cvalue counter
-	var new_gvalue gauge
+	var v := reflect.ValueOf(mp)
+	var newValue float64
+	var newCvalue counter
+	var newGvalue gauge
 	fieldName, _ := v.Field(0).Interface().(string)
-	new_value, _ = v.Field(1).Interface().(float64)
+	newValue, _ = v.Field(1).Interface().(float64)
 
 	t := reflect.TypeOf(m)
 
@@ -89,15 +88,15 @@ func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, 
 	}
 	if stringInSlice(fieldName, names) {
 		if fieldName == "PollCount" {
-			new_cvalue = m.PollCount + counter(new_value)
-			fmt.Println(new_cvalue)
+			newCvalue = m.PollCount + counter(newValue)
+			fmt.Println(newCvalue)
 			fmt.Println(v.Field(1).Interface())
-			reflect.ValueOf(&m).Elem().FieldByName(fieldName).Set(reflect.ValueOf(new_cvalue))
+			reflect.ValueOf(&m).Elem().FieldByName(fieldName).Set(reflect.ValueOf(newCvalue))
 		} else {
-			new_gvalue = gauge(new_value)
-			fmt.Println(new_gvalue)
+			newGvalue = gauge(newValue)
+			fmt.Println(newGvalue)
 			fmt.Println(v.Field(1).Interface())
-			reflect.ValueOf(&m).Elem().FieldByName(fieldName).Set(reflect.ValueOf(new_gvalue))
+			reflect.ValueOf(&m).Elem().FieldByName(fieldName).Set(reflect.ValueOf(newGvalue))
 		}
 	} else {
 		return m, errors.New("missing field")
@@ -108,9 +107,8 @@ func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, 
 
 func RepositoryRetrieve(m metricsContainer, mp GetMetrics ) (string, error) {
 
-	var v reflect.Value
-	v = reflect.ValueOf(mp)
-	var requested_value string
+	var v := reflect.ValueOf(mp)
+	var requestedValue string
 	fieldName, _ := v.Field(0).Interface().(string)
 
 	t := reflect.TypeOf(m)
@@ -120,11 +118,11 @@ func RepositoryRetrieve(m metricsContainer, mp GetMetrics ) (string, error) {
 		names[i] = t.Field(i).Name
 	}
 	if stringInSlice(fieldName, names) {
-		requested_value = fmt.Sprintf("%v", reflect.ValueOf(&m).Elem().FieldByName(fieldName).Interface())
+		requestedValue = fmt.Sprintf("%v", reflect.ValueOf(&m).Elem().FieldByName(fieldName).Interface())
 	} else {
-		return requested_value, errors.New("missing field")
+		return requestedValue, errors.New("missing field")
 	}
-	return requested_value, nil
+	return requestedValue, nil
 
 }
 
@@ -138,15 +136,15 @@ func NewRouter() chi.Router {
     
     r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
         rw.Header().Set("Content-Type", "application/json")
-        fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 8)
+        fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
         if err != nil {
             rw.WriteHeader(http.StatusNotFound)
             rw.Write([]byte("wrong value"))
             return
         }
-        var struct_params = UpdateMetrics{StructKey: chi.URLParam(r, "name"), StructValue: fv}
+        var structParams = UpdateMetrics{StructKey: chi.URLParam(r, "name"), StructValue: fv}
 
-        sharedMetrics , err = RepositoryUpdate(sharedMetrics, struct_params)
+        sharedMetrics , err = RepositoryUpdate(sharedMetrics, structParams)
         if err != nil {
             rw.WriteHeader(http.StatusNotFound)
             rw.Write([]byte("wrong parameter"))
@@ -163,11 +161,11 @@ func NewRouter() chi.Router {
 
         params := chi.URLParam(r, "name")
 
-        var request_params = GetMetrics{StructKey: params}
+        var requestParams = GetMetrics{StructKey: params}
 
-        retrievedMetrics , get_err := RepositoryRetrieve(sharedMetrics, request_params)
+        retrievedMetrics , getErr := RepositoryRetrieve(sharedMetrics, requestParams)
         fmt.Println(retrievedMetrics)
-        if get_err != nil {
+        if getErr != nil {
             rw.WriteHeader(http.StatusNotFound)
             rw.Write([]byte("wrong parameter"))
             return
