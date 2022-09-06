@@ -98,12 +98,18 @@ func NewRouter() chi.Router {
             rw.Write([]byte("wrong value"))
             return
         }
+        fieldType := chi.URLParam(r, "type")
+        if fieldType != "counter" && fieldType != "gauge" {
+            rw.WriteHeader(http.StatusBadRequest)
+            rw.Write([]byte("wrong value"))
+            return
+        }
         var structParams = UpdateMetrics{StructKey: chi.URLParam(r, "name"), StructValue: fv, StructType: chi.URLParam(r, "type")}
 
         sharedMetrics , err = RepositoryUpdate(sharedMetrics, structParams)
         if err != nil {
-            rw.WriteHeader(http.StatusNotFound)
-            rw.Write([]byte("wrong parameter"))
+            rw.WriteHeader(http.StatusNotImplemented)
+            rw.Write([]byte("invalid type"))
             return
         }
         s, _ := json.Marshal(sharedMetrics)
@@ -118,6 +124,11 @@ func NewRouter() chi.Router {
         params := chi.URLParam(r, "name")
 
         var requestParams = GetMetrics{StructKey: params}
+        if _, ok := sharedMetrics.Container[params]; ok != true {
+			rw.WriteHeader(http.StatusNotFound)
+            rw.Write([]byte("missing parameter"))
+            return
+        } 
 
         retrievedMetrics , getErr := RepositoryRetrieve(sharedMetrics, requestParams)
         fmt.Println(retrievedMetrics)
