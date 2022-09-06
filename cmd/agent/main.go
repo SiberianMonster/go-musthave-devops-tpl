@@ -2,7 +2,7 @@ package main
 
 import (
 
-	"go-musthave-devops-tpl/internal/metricsfuncs"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metricsfuncs"
 	"fmt"
 )
 
