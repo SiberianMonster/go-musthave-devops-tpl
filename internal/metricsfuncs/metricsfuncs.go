@@ -3,6 +3,7 @@ package metricsfuncs
 import (
 	"time"
 	"runtime"
+	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -49,61 +50,69 @@ func MetricsUpdate(m utils.MetricsContainer, rtm runtime.MemStats ) utils.Metric
 
 
 
-func ReportUpdate(pollduration int, reportduration int) {
+func ReportUpdate(pollduration int, reportduration int) error {
 
 	var m utils.MetricsContainer
 	var rtm runtime.MemStats
 	var v reflect.Value
 	var typeOfS reflect.Type
-	pollTicker := time.NewTicker(time.Second*time.Duration(pollduration))
-    reportTicker := time.NewTicker(time.Second*time.Duration(reportduration))
+	var err error
 
-	m.PollCount = 0
+	if pollduration >= reportduration {
+		err = errors.New("reportduration needs to be larger than pollduration")
+		return err
+	} else {
+		pollTicker := time.NewTicker(time.Second*time.Duration(pollduration))
+		reportTicker := time.NewTicker(time.Second*time.Duration(reportduration))
 
-	for {
+		m.PollCount = 0
 
-		select {
-        case <-pollTicker.C:
-            // update stats
-			runtime.ReadMemStats(&rtm)
-			m = MetricsUpdate(m, rtm)
-			v = reflect.ValueOf(m)
-			typeOfS = v.Type()
-        case <-reportTicker.C:
-            // send stats to the server
+		for {
 
-			for i := 0; i< v.NumField(); i++ {
+			select {
+			case <-pollTicker.C:
+				// update stats
+				runtime.ReadMemStats(&rtm)
+				m = MetricsUpdate(m, rtm)
+				v = reflect.ValueOf(m)
+				typeOfS = v.Type()
+			case <-reportTicker.C:
+				// send stats to the server
 
-					url := url.URL{
-						Scheme: "http",
-						Host:   "127.0.0.1:8080",
-					}
+				for i := 0; i< v.NumField(); i++ {
 
-					if v.Field(i).Kind() == reflect.Float64 {
-						url.Path += fmt.Sprintf("update/gauge/%v/%f", typeOfS.Field(i).Name, v.Field(i).Interface()) 
-					} else {
-						url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface()) 
-					}
+						url := url.URL{
+							Scheme: "http",
+							Host:   "127.0.0.1:8080",
+						}
 
-					fmt.Printf("Encoded URL is %q\n", url.String())
-					client := &http.Client{}
-					request, err := http.NewRequest("POST", url.String(), nil)
-					if err != nil {
-						fmt.Println(err)
-					}
-					request.Header.Set("Content-Type", "text/plain")
-					response, err := client.Do(request)
-					if err != nil {
-						fmt.Println(err)
-					}
-					response.Body.Close()
-					// response status
-					fmt.Println("Status code ", response.Status)
-					
-			}
+						if v.Field(i).Kind() == reflect.Float64 {
+							url.Path += fmt.Sprintf("update/gauge/%v/%f", typeOfS.Field(i).Name, v.Field(i).Interface()) 
+						} else {
+							url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface()) 
+						}
+
+						fmt.Printf("Encoded URL is %q\n", url.String())
+						client := &http.Client{}
+						request, err := http.NewRequest("POST", url.String(), nil)
+						if err != nil {
+							fmt.Println(err)
+						}
+						request.Header.Set("Content-Type", "text/plain")
+						response, err := client.Do(request)
+						if err != nil {
+							fmt.Println(err)
+						}
+						response.Body.Close()
+						// response status
+						fmt.Println("Status code ", response.Status)
+						
+				}
+				
+			}	
 			
-		}	
-		
+		}
+		return err
 	}
 }
 
