@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"net/url"
 	"net/http"
-	"go-musthave-devops-tpl/internal/utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/utils"
 )
 
 

@@ -2,7 +2,7 @@ package main
 
 import (
     "net/http"
-    "go-musthave-devops-tpl/internal/serverhandlers"
+    "github.com/SiberianMonster/go-musthave-devops-tpl/internal/serverhandlers"
     "log"
 )
 

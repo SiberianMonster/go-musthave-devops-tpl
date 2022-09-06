@@ -3,7 +3,7 @@ package storage
 import (
 	
 	"reflect"
-	"go-musthave-devops-tpl/internal/utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/utils"
 	"fmt"
 	"golang.org/x/exp/slices"
 	"errors"

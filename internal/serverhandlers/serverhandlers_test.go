@@ -6,7 +6,7 @@ import  (
     "net/http/httptest"
     "github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
-    "go-musthave-devops-tpl/internal/serverhandlers"
+    "github.com/SiberianMonster/go-musthave-devops-tpl/internal/serverhandlers"
     "io/ioutil"
 )
 
