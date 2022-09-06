@@ -48,8 +48,9 @@ func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, 
 	var newGvalue gauge
 	fieldName, _ := v.Field(0).Interface().(string)
 	newValue, _ = v.Field(1).Interface().(float64)
+    fieldType, _ := v.Field(2).Interface().(string)
 
-	if fieldName == "PollCount" {
+	if fieldType == "counter" {
         if val, ok := m.Container[fieldName]; ok {
 			newCvalue = val.(counter) + counter(newValue)
         } else {
@@ -100,7 +101,7 @@ func NewRouter() chi.Router {
         }
         fieldType := chi.URLParam(r, "type")
         if fieldType != "counter" && fieldType != "gauge" {
-            rw.WriteHeader(http.StatusBadRequest)
+            rw.WriteHeader(http.StatusNotImplemented)
             rw.Write([]byte("wrong value"))
             return
         }
@@ -124,7 +125,7 @@ func NewRouter() chi.Router {
         params := chi.URLParam(r, "name")
 
         var requestParams = GetMetrics{StructKey: params}
-        if _, ok := sharedMetrics.Container[params]; ok != true {
+        if _, ok := sharedMetrics.Container[params]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
             rw.Write([]byte("missing parameter"))
             return
