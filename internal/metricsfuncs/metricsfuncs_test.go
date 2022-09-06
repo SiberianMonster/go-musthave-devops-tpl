@@ -4,7 +4,7 @@ import (
 	"testing"
 	"errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metricsfuncs"
+	"go-musthave-devops-tpl/internal/metricsfuncs"
 )
 
 func TestReportUpdate(t *testing.T) {

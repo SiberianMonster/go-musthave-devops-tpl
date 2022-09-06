@@ -2,8 +2,8 @@ package serverhandlers
 
 import (
     "net/http"
-    "github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
-    "github.com/SiberianMonster/go-musthave-devops-tpl/internal/utils"
+    "go-musthave-devops-tpl/internal/storage"
+    "go-musthave-devops-tpl/internal/utils"
     "strconv"
     "fmt"
     "strings"

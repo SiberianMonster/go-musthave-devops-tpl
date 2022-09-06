@@ -3,11 +3,19 @@ package storage
 import (
 	
 	"reflect"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/utils"
+	"go-musthave-devops-tpl/internal/utils"
 	"fmt"
-	"golang.org/x/exp/slices"
 	"errors"
 )
+
+func stringInSlice(a string, list []string) bool {
+    for _, b := range list {
+        if b == a {
+            return true
+        }
+    }
+    return false
+}
 
 
 func RepositoryUpdate(m utils.MetricsContainer, mp utils.UpdateMetrics ) (utils.MetricsContainer, error) {
@@ -26,7 +34,7 @@ func RepositoryUpdate(m utils.MetricsContainer, mp utils.UpdateMetrics ) (utils.
 	for i := range names {
 		names[i] = t.Field(i).Name
 	}
-	if slices.Contains(names, fieldName){
+	if stringInSlice(fieldName, names) {
 		if fieldName == "PollCount" {
 			new_cvalue = m.PollCount + utils.Counter(new_value)
 			fmt.Println(new_cvalue)
