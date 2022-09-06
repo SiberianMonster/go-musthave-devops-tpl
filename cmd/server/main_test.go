@@ -36,19 +36,10 @@ func TestRouter(t *testing.T) {
     assert.Equal(t, http.StatusOK, resp.StatusCode)
     assert.Equal(t, `{"status":"ok"}`, body)
 
-    resp, body = testRequest(t, ts, "GET", "/update/gauge/NotRandomValue/0.318058")
-	defer resp.Body.Close()
-    assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-    assert.Equal(t, `wrong parameter`, body)
-
     resp, body = testRequest(t, ts, "GET", "/update/gauge/RandomValue/aaa")
 	defer resp.Body.Close()
-    assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+    assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
     assert.Equal(t, `wrong value`, body)
 
-    resp, body = testRequest(t, ts, "GET", "/value/gauge/NotRandomValue")
-	defer resp.Body.Close()
-    assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-    assert.Equal(t, `wrong parameter`, body)
 } 
 
