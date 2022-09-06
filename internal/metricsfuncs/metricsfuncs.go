@@ -97,11 +97,15 @@ func ReportUpdate(pollduration int, reportduration int) error {
 						request, err := http.NewRequest("POST", url.String(), nil)
 						if err != nil {
 							fmt.Println(err)
+							return err
+							
 						}
 						request.Header.Set("Content-Type", "text/plain")
 						response, err := client.Do(request)
 						if err != nil {
 							fmt.Println(err)
+							return err
+							
 						}
 						response.Body.Close()
 						// response status
@@ -112,7 +116,7 @@ func ReportUpdate(pollduration int, reportduration int) error {
 			}	
 			
 		}
-		return err
+		
 	}
 }
 

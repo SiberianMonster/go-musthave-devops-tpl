@@ -22,7 +22,7 @@ func StatusHandler(rw http.ResponseWriter, r *http.Request) {
         rw.Write([]byte("wrong value"))
         return
     }
-    var struct_params = utils.UpdateMetrics{params[len(params)-2], fv}
+    var struct_params = utils.UpdateMetrics{StructKey: params[len(params)-2], StructValue: fv}
 
     sharedMetrics , err = storage.RepositoryUpdate(sharedMetrics, struct_params)
     if err != nil {
