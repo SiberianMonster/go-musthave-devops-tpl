@@ -73,7 +73,7 @@ func stringInSlice(a string, list []string) bool {
 
 func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, error) {
 
-	var v := reflect.ValueOf(mp)
+	v := reflect.ValueOf(mp)
 	var newValue float64
 	var newCvalue counter
 	var newGvalue gauge
@@ -107,7 +107,7 @@ func RepositoryUpdate(m metricsContainer, mp UpdateMetrics ) (metricsContainer, 
 
 func RepositoryRetrieve(m metricsContainer, mp GetMetrics ) (string, error) {
 
-	var v := reflect.ValueOf(mp)
+	v := reflect.ValueOf(mp)
 	var requestedValue string
 	fieldName, _ := v.Field(0).Interface().(string)
 
