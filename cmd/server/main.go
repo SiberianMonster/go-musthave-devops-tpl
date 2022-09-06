@@ -128,8 +128,7 @@ func RepositoryRetrieve(m metricsContainer, mp GetMetrics ) (string, error) {
 
 }
 
-func main() {
-
+func NewRouter() chi.Router {
     r := chi.NewRouter()
     r.Use(middleware.RequestID)
     r.Use(middleware.RealIP)
@@ -187,7 +186,13 @@ func main() {
         rw.WriteHeader(http.StatusOK)
         rw.Write([]byte(string(s)))
     }) 
+    return r
+}
 
+func main() {
+
+    r := NewRouter()
+    
     // запуск сервера с адресом localhost, порт 8080
     //server := &http.Server{
     //    Addr: "127.0.0.1:8080",
