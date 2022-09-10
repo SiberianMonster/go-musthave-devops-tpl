@@ -112,7 +112,7 @@ func NewRouter() chi.Router {
 			return
 		}
 		s, _ := json.Marshal(sharedMetrics)
-		log.Println(string(s))
+		log.Printf(string(s))
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(`{"status":"ok"}`))
 	})
@@ -146,7 +146,7 @@ func NewRouter() chi.Router {
 		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 
 		s, _ := json.Marshal(sharedMetrics)
-		log.Println(string(s))
+		log.Printf(string(s))
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(string(s)))
 	})
