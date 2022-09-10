@@ -148,7 +148,7 @@ func ReportUpdate(p int, r int) error {
 				}
 				response.Body.Close()
 				// response status
-				log.Println("Status code ", response.Status)
+				log.Println("Status code %q\n", response.Status)
 
 			}
 
