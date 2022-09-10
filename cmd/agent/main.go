@@ -1,19 +1,24 @@
 package main
 
 import (
-
-	"time"
-	"runtime"
 	"errors"
-	"math/rand"
-	"reflect"
 	"fmt"
-	"net/url"
+	"log"
+	"math/rand"
 	"net/http"
+	"net/url"
+	"reflect"
+	"runtime"
+	"time"
 )
 
 type gauge float64
 type counter int64
+
+const (
+	pollduration   int = 2
+	reportduration int = 10
+)
 
 type metricsContainer struct {
 	Alloc,
@@ -45,10 +50,9 @@ type metricsContainer struct {
 	NumForcedGC,
 	NumGC gauge
 	PollCount counter
-
 }
 
-func MetricsUpdate(m metricsContainer, rtm runtime.MemStats ) metricsContainer {
+func MetricsUpdate(m metricsContainer, rtm runtime.MemStats) metricsContainer {
 
 	m.Alloc = gauge(rtm.Alloc)
 	m.BuckHashSys = gauge(rtm.BuckHashSys)
@@ -66,7 +70,7 @@ func MetricsUpdate(m metricsContainer, rtm runtime.MemStats ) metricsContainer {
 	m.MCacheInuse = gauge(rtm.MCacheInuse)
 	m.MCacheSys = gauge(rtm.MCacheSys)
 	m.MSpanInuse = gauge(rtm.MSpanInuse)
-	m.MSpanSys =gauge(rtm.MSpanSys)
+	m.MSpanSys = gauge(rtm.MSpanSys)
 	m.Mallocs = gauge(rtm.Mallocs)
 	m.NextGC = gauge(rtm.NextGC)
 	m.NumForcedGC = gauge(rtm.NumForcedGC)
@@ -83,9 +87,7 @@ func MetricsUpdate(m metricsContainer, rtm runtime.MemStats ) metricsContainer {
 
 }
 
-
-
-func ReportUpdate(pollduration int, reportduration int) error {
+func ReportUpdate(p int, r int) error {
 
 	var m metricsContainer
 	var rtm runtime.MemStats
@@ -93,72 +95,72 @@ func ReportUpdate(pollduration int, reportduration int) error {
 	var typeOfS reflect.Type
 	var err error
 
-	if pollduration >= reportduration {
+	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
 		return err
-	} else {
-		pollTicker := time.NewTicker(time.Second*time.Duration(pollduration))
-		reportTicker := time.NewTicker(time.Second*time.Duration(reportduration))
 
-		m.PollCount = 0
+	}
 
-		for {
+	pollTicker := time.NewTicker(time.Second * time.Duration(p))
+	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
-			select {
-			case <-pollTicker.C:
-				// update stats
-				runtime.ReadMemStats(&rtm)
-				m = MetricsUpdate(m, rtm)
-				v = reflect.ValueOf(m)
-				typeOfS = v.Type()
-			case <-reportTicker.C:
-				// send stats to the server
+	m.PollCount = 0
 
-				for i := 0; i< v.NumField(); i++ {
+	for {
 
-						url := url.URL{
-							Scheme: "http",
-							Host:   "127.0.0.1:8080",
-						}
+		select {
+		case <-pollTicker.C:
+			// update stats
+			runtime.ReadMemStats(&rtm)
+			m = MetricsUpdate(m, rtm)
+			v = reflect.ValueOf(m)
+			typeOfS = v.Type()
+		case <-reportTicker.C:
+			// send stats to the server
 
-						if v.Field(i).Kind() == reflect.Float64 {
-							url.Path += fmt.Sprintf("update/gauge/%v/%f", typeOfS.Field(i).Name, v.Field(i).Interface()) 
-						} else {
-							url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface()) 
-						}
+			for i := 0; i < v.NumField(); i++ {
 
-						fmt.Printf("Encoded URL is %q\n", url.String())
-						client := &http.Client{}
-						request, err := http.NewRequest("POST", url.String(), nil)
-						if err != nil {
-							fmt.Println(err)
-							return err
-							
-						}
-						request.Header.Set("Content-Type", "text/plain")
-						response, err := client.Do(request)
-						if err != nil {
-							fmt.Println(err)
-							return err
-							
-						}
-						response.Body.Close()
-						// response status
-						fmt.Println("Status code ", response.Status)
-						
+				url := url.URL{
+					Scheme: "http",
+					Host:   "127.0.0.1:8080",
 				}
-				
-			}	
-			
+
+				if v.Field(i).Kind() == reflect.Float64 {
+					url.Path += fmt.Sprintf("update/gauge/%v/%f", typeOfS.Field(i).Name, v.Field(i).Interface())
+				} else {
+					url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface())
+				}
+
+				log.Println("Encoded URL is %q\n", url.String())
+				client := &http.Client{}
+				request, err := http.NewRequest("POST", url.String(), nil)
+				if err != nil {
+					log.Fatal(err)
+					return err
+
+				}
+				request.Header.Set("Content-Type", "text/plain")
+				response, err := client.Do(request)
+				if err != nil {
+					log.Fatal(err)
+					return err
+
+				}
+				response.Body.Close()
+				// response status
+				log.Println("Status code ", response.Status)
+
+			}
+
 		}
-		
+
 	}
 }
 
-
 func main() {
-	err := ReportUpdate(2,10)
-	if err != nil {fmt.Println(err)
-		}
+	err := ReportUpdate(pollduration, reportduration)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 }
