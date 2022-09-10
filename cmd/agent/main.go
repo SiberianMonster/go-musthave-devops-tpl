@@ -131,7 +131,7 @@ func ReportUpdate(p int, r int) error {
 					url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface())
 				}
 
-				log.Println("Encoded URL is %q\n", url.String())
+				log.Println(fmt.Sprintf("Encoded URL is %q\n", url.String()))
 				client := &http.Client{}
 				request, err := http.NewRequest("POST", url.String(), nil)
 				if err != nil {
@@ -148,7 +148,7 @@ func ReportUpdate(p int, r int) error {
 				}
 				response.Body.Close()
 				// response status
-				log.Println("Status code %q\n", response.Status)
+				log.Println(fmt.Sprintf("Status code %q\n", response.Status))
 
 			}
 
