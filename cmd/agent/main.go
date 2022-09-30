@@ -10,15 +10,23 @@ import (
 	"reflect"
 	"runtime"
 	"time"
+	"encoding/json"
+	"bytes"
+	"strconv"
+	"os"
 )
 
 type gauge float64
 type counter int64
 
-const (
-	pollduration   int = 2
-	reportduration int = 10
-)
+
+func getEnv(key, fallback string) string {
+    if value, ok := os.LookupEnv(key); ok {
+        return value
+    }
+    return fallback
+}
+
 
 type metricsContainer struct {
 	Alloc,
@@ -48,52 +56,68 @@ type metricsContainer struct {
 	GCCPUFraction,
 	RandomValue,
 	NumForcedGC,
-	NumGC gauge
-	PollCount counter
+	NumGC float64
+	PollCount int64
 }
 
 func MetricsUpdate(m metricsContainer, rtm runtime.MemStats) metricsContainer {
 
-	m.Alloc = gauge(rtm.Alloc)
-	m.BuckHashSys = gauge(rtm.BuckHashSys)
-	m.Frees = gauge(rtm.Frees)
-	m.GCCPUFraction = gauge(rtm.GCCPUFraction)
-	m.GCSys = gauge(rtm.GCSys)
-	m.HeapAlloc = gauge(rtm.HeapAlloc)
-	m.HeapIdle = gauge(rtm.HeapIdle)
-	m.HeapInuse = gauge(rtm.HeapInuse)
-	m.HeapObjects = gauge(rtm.HeapObjects)
-	m.HeapReleased = gauge(rtm.HeapReleased)
-	m.HeapSys = gauge(rtm.HeapSys)
-	m.LastGC = gauge(rtm.LastGC)
-	m.Lookups = gauge(rtm.Lookups)
-	m.MCacheInuse = gauge(rtm.MCacheInuse)
-	m.MCacheSys = gauge(rtm.MCacheSys)
-	m.MSpanInuse = gauge(rtm.MSpanInuse)
-	m.MSpanSys = gauge(rtm.MSpanSys)
-	m.Mallocs = gauge(rtm.Mallocs)
-	m.NextGC = gauge(rtm.NextGC)
-	m.NumForcedGC = gauge(rtm.NumForcedGC)
-	m.NumGC = gauge(rtm.NumGC)
-	m.OtherSys = gauge(rtm.OtherSys)
-	m.PauseTotalNs = gauge(rtm.PauseTotalNs)
-	m.StackInuse = gauge(rtm.StackInuse)
-	m.StackSys = gauge(rtm.StackSys)
-	m.Sys = gauge(rtm.Sys)
-	m.TotalAlloc = gauge(rtm.TotalAlloc)
+	m.Alloc = float64(rtm.Alloc)
+	m.BuckHashSys = float64(rtm.BuckHashSys)
+	m.Frees = float64(rtm.Frees)
+	m.GCCPUFraction = float64(rtm.GCCPUFraction)
+	m.GCSys = float64(rtm.HeapAlloc)
+	m.HeapIdle = float64(rtm.HeapIdle)
+	m.HeapInuse = float64(rtm.HeapInuse)
+	m.HeapObjects = float64(rtm.HeapObjects)
+	m.HeapReleased = float64(rtm.HeapReleased)
+	m.HeapSys = float64(rtm.HeapSys)
+	m.LastGC = float64(rtm.LastGC)
+	m.Lookups = float64(rtm.Lookups)
+	m.MCacheInuse = float64(rtm.MCacheInuse)
+	m.MCacheSys = float64(rtm.MCacheSys)
+	m.MSpanInuse = float64(rtm.MSpanInuse)
+	m.MSpanSys = float64(rtm.MSpanSys)
+	m.Mallocs = float64(rtm.Mallocs)
+	m.NextGC = float64(rtm.NextGC)
+	m.NumForcedGC = float64(rtm.NumForcedGC)
+	m.NumGC = float64(rtm.NumGC)
+	m.OtherSys = float64(rtm.OtherSys)
+	m.PauseTotalNs = float64(rtm.PauseTotalNs)
+	m.StackInuse = float64(rtm.StackInuse)
+	m.StackSys = float64(rtm.StackSys)
+	m.Sys = float64(rtm.Sys)
+	m.TotalAlloc = float64(rtm.TotalAlloc)
 	m.PollCount += 1
-	m.RandomValue = gauge(rand.Float64())
+	m.RandomValue = rand.Float64()
 	return m
 
 }
 
-func ReportUpdate(p int, r int) error {
+type Metrics struct {
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+} 
+
+func ReportUpdate(sp string, sr string, h string) error {
 
 	var m metricsContainer
 	var rtm runtime.MemStats
 	var v reflect.Value
 	var typeOfS reflect.Type
 	var err error
+
+	p, err := strconv.Atoi(sp)
+    if err != nil {
+        return err
+    }
+
+	r, err := strconv.Atoi(sr)
+    if err != nil {
+        return err
+    }
 
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
@@ -122,24 +146,36 @@ func ReportUpdate(p int, r int) error {
 
 				url := url.URL{
 					Scheme: "http",
-					Host:   "127.0.0.1:8080",
+					Host:   h,
 				}
+				url.Path += fmt.Sprintf("update/")
+
+				var metrics Metrics
 
 				if v.Field(i).Kind() == reflect.Float64 {
-					url.Path += fmt.Sprintf("update/gauge/%v/%f", typeOfS.Field(i).Name, v.Field(i).Interface())
+					metrics.ID =  typeOfS.Field(i).Name   
+					metrics.MType =  "gauge"      
+					value := v.Field(i).Interface().(float64)
+					metrics.Value = &value
+
 				} else {
-					url.Path += fmt.Sprintf("update/counter/%v/%v", typeOfS.Field(i).Name, v.Field(i).Interface())
+					metrics.ID =  typeOfS.Field(i).Name   
+					metrics.MType =  "counter"      
+					delta := v.Field(i).Interface().(int64)
+					metrics.Delta = &delta
 				}
 
-				log.Printf("Encoded URL is %q\n", url.String())
+				body, _ := json.Marshal(metrics)
+
 				client := &http.Client{}
-				request, err := http.NewRequest("POST", url.String(), nil)
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+
 				if err != nil {
 					log.Fatal(err)
 					return err
 
 				}
-				request.Header.Set("Content-Type", "text/plain")
+				request.Header.Set("Content-Type", "application/json")
 				response, err := client.Do(request)
 				if err != nil {
 					log.Fatal(err)
@@ -149,7 +185,6 @@ func ReportUpdate(p int, r int) error {
 				response.Body.Close()
 				// response status
 				log.Printf("Status code %q\n", response.Status)
-
 			}
 
 		}
@@ -158,7 +193,13 @@ func ReportUpdate(p int, r int) error {
 }
 
 func main() {
-	err := ReportUpdate(pollduration, reportduration)
+
+	
+	sp := getEnv("POLL_INTERVAL", "2")
+	sr := getEnv("REPORT_INTERVAL", "10")
+	host := getEnv("ADDRESS", "127.0.0.1:8080")
+	
+	err := ReportUpdate(sp, sr, host)
 	if err != nil {
 		log.Fatal(err)
 	}

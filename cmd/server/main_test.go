@@ -7,11 +7,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"encoding/json"
+	"bytes"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, method, path string) (*http.Response, string) {
 
-	req, err := http.NewRequest(method, ts.URL+path, nil)
+func testRequest(t *testing.T, ts *httptest.Server, method string, path string, metrics Metrics) (*http.Response, string) {
+
+	body, _ := json.Marshal(metrics)
+	
+	req, err := http.NewRequest(method, ts.URL+path, bytes.NewBuffer(body))
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -31,14 +36,26 @@ func TestRouter(t *testing.T) {
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
-	resp, body := testRequest(t, ts, "GET", "/update/gauge/RandomValue/0.318058")
+	metrics := Metrics {
+		ID: "Alloc",
+		MType: "gauge",
+		Value: 2.0 ,
+	}
+
+	resp, body := testRequest(t, ts, "POST", "/update/", metrics)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, `{"status":"ok"}`, body)
 
-	resp, body = testRequest(t, ts, "GET", "/update/gauge/RandomValue/aaa")
+	wrong_metrics := Metrics {
+		ID: "Alloc",
+		MType: "othertype",
+		Value: 2.0 ,
+	}
+
+	resp, body = testRequest(t, ts, "POST", "/update/", wrong_metrics)
 	defer resp.Body.Close()
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	assert.Equal(t, `wrong value`, body)
+	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
+	assert.Equal(t, `invalid type`, body)
 
 }
