@@ -143,7 +143,7 @@ func NewRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	
-	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 		var structParams Metrics
 
@@ -173,7 +173,7 @@ func NewRouter() chi.Router {
 		rw.Write([]byte(`{"status":"ok"}`))
 	})
 
-	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		var structParams Metrics
 
@@ -208,6 +208,71 @@ func NewRouter() chi.Router {
 		rw.WriteHeader(http.StatusOK)
 		json.NewEncoder(rw).Encode(retrievedMetrics)
 		
+	})
+
+	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("wrong value"))
+			return
+		}
+		fieldType := chi.URLParam(r, "type")
+		if fieldType != "counter" && fieldType != "gauge" {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("wrong value"))
+			return
+		}
+		if fieldType == "counter" {
+			var structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: fv, MType: chi.URLParam(r, "type")}
+		} else {
+			var structParams = Metrics{ID: chi.URLParam(r, "name"), Value: fv, MType: chi.URLParam(r, "type")}
+		}
+
+		err = RepositoryUpdate(structParams)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("update failed"))
+			return
+		}
+		s, _ := json.Marshal(Container)
+		log.Print(string(s))
+		rw.WriteHeader(http.StatusOK)
+		rw.Write([]byte(`{"status":"ok"}`))
+	})
+
+	r.Get("/value/{type}/{name}", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
+
+		params := chi.URLParam(r, "name")
+		fieldType := chi.URLParam(r, "type")
+
+		if _, ok := sharedMetrics.Container[params]; !ok {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("missing parameter"))
+			return
+		}
+		if fieldType != "counter" && fieldType != "gauge" {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("wrong value"))
+			return
+		}
+
+		var structParams = Metrics{ID: params,  MType: chi.URLParam(r, "type")}
+		retrievedMetrics, getErr := RepositoryRetrieve(structParams)
+
+		log.Println(retrievedMetrics)
+		if getErr != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("value retrieval failed"))
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		json.NewEncoder(rw).Encode(retrievedMetrics)
+		
+
 	})
 
 	r.Get("/", func(rw http.ResponseWriter, r *http.Request) {

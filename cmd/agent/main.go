@@ -109,15 +109,7 @@ func ReportUpdate(sp string, sr string, h string) error {
 	var typeOfS reflect.Type
 	var err error
 
-	p, err := strconv.Atoi(sp)
-    if err != nil {
-        return err
-    }
-
-	r, err := strconv.Atoi(sr)
-    if err != nil {
-        return err
-    }
+	host := getEnv("ADDRESS", "127.0.0.1:8080")
 
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
@@ -197,9 +189,18 @@ func main() {
 	
 	sp := getEnv("POLL_INTERVAL", "2")
 	sr := getEnv("REPORT_INTERVAL", "10")
-	host := getEnv("ADDRESS", "127.0.0.1:8080")
+
+	p, err := strconv.Atoi(sp)
+    if err != nil {
+        return err
+    }
+
+	r, err := strconv.Atoi(sr)
+    if err != nil {
+        return err
+    }
 	
-	err := ReportUpdate(sp, sr, host)
+	err := ReportUpdate(p, r)
 	if err != nil {
 		log.Fatal(err)
 	}
