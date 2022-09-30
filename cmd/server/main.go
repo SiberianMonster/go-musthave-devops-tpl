@@ -225,9 +225,10 @@ func NewRouter() chi.Router {
 			return
 		}
 		if fieldType == "counter" {
-			var structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: fv, MType: chi.URLParam(r, "type")}
+			fv_counter := int64(fv)
+			var structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: &fv_counter, MType: chi.URLParam(r, "type")}
 		} else {
-			var structParams = Metrics{ID: chi.URLParam(r, "name"), Value: fv, MType: chi.URLParam(r, "type")}
+			var structParams = Metrics{ID: chi.URLParam(r, "name"), Value: &fv, MType: chi.URLParam(r, "type")}
 		}
 
 		err = RepositoryUpdate(structParams)

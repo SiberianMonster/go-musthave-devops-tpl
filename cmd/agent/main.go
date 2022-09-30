@@ -101,7 +101,7 @@ type Metrics struct {
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 } 
 
-func ReportUpdate(sp string, sr string, h string) error {
+func ReportUpdate(p int, r int) error {
 
 	var m metricsContainer
 	var rtm runtime.MemStats
