@@ -387,7 +387,7 @@ func main() {
         log.Fatal(err)
     }
 
-	go StaticFileUpdate(storeInt, storeFile, restoreValue)
+	//go StaticFileUpdate(storeInt, storeFile, restoreValue)
 
 	r := NewRouter()
 
