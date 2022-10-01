@@ -139,7 +139,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += "update"
+				url.Path += "update/"
 
 				var metrics Metrics
 
