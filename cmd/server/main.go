@@ -10,7 +10,6 @@ import (
 	"os"
 	"bufio"
 	"strconv"
-	"time"
 	"fmt"
 )
 
@@ -101,60 +100,7 @@ func RepositoryRetrieveString(mp Metrics) (string, error) {
 
 }
 
-func StaticFileSave(storeFile string) {
 
-	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
-	if err != nil {
-			log.Fatal(err)
-	}
-	writer := bufio.NewWriter(file)
-		
-	data, err := json.Marshal(&Container)
-	if err != nil {
-			log.Fatal(err)
-	}
-
-	if _, err := writer.Write(data); err != nil {
-			log.Fatal(err)
-	}
-
-	if err := writer.WriteByte('\n'); err != nil {
-			log.Fatal(err)
-	}
-	writer.Flush()
-	file.Close()
-	log.Printf("saved json to file")
-}
-
-
-func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
-
-	if restore {
-		file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			log.Printf("Uploading data from json")
-			reader := bufio.NewReader(file)
-			data, err := reader.ReadBytes('\n')
-			if err != nil {
-			} else {
-				err = json.Unmarshal([]byte(data), &Container)
-				if err != nil {
-					log.Printf("no json data to decode")
-				}
-			}
-		file.Close()
-		}
-
-	}
-
-	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
-
-	for range ticker.C {
-		StaticFileSave(storeFile)
-	}
-}
 
 
 func NewRouter() chi.Router {
@@ -376,22 +322,8 @@ func main() {
 
 	Container = make (map[string]interface{})
 
-	host := getEnv("ADDRESS", "127.0.0.1:8080")
-	storeInterval := getEnv("STORE_INTERVAL", "300")
-	storeFile := getEnv("STORE_FILE", "/tmp/devops-metrics-db.json")
-	restore := getEnv("RESTORE", "false")
-
-	restoreValue, err := strconv.ParseBool(restore)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	storeInt, err := strconv.Atoi(storeInterval)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-	go StaticFileUpdate(storeInt, storeFile, restoreValue)
+	host := "127.0.0.1:8080"
+	
 
 	r := NewRouter()
 
@@ -400,5 +332,4 @@ func main() {
 	//    Addr: "127.0.0.1:8080",
 	//}
 	log.Fatal(http.ListenAndServe(host, r))
-	StaticFileSave(storeFile)
 }

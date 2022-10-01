@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"time"
 	"encoding/json"
-	"strconv"
 	"os"
 	"bytes"
 )
@@ -194,21 +193,7 @@ func ReportUpdate(p int, r int) error {
 func main() {
 
 	
-	sp := getEnv("POLL_INTERVAL", "2")
-	sr := getEnv("REPORT_INTERVAL", "10")
-
-	p, err := strconv.Atoi(sp)
-    if err != nil {
-        log.Fatal(err)
-    }
-
-	r, err := strconv.Atoi(sr)
-    if err != nil {
-        log.Fatal(err)
-    }
-	time.Sleep(8 * time.Second)
-	
-	err = ReportUpdate(p, r)
+	err = ReportUpdate(2, 10)
 	if err != nil {
 		log.Fatal(err)
 	}
