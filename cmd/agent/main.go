@@ -139,7 +139,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += "update"
+				url.Path += "update/"
 
 				var metrics Metrics
 
@@ -187,8 +187,8 @@ func ReportUpdate(p int, r int) error {
 func main() {
 
 	
-	sp := getEnv("POLL_INTERVAL", "2")
-	sr := getEnv("REPORT_INTERVAL", "10")
+	sp := getEnv("POLL_INTERVAL", "1")
+	sr := getEnv("REPORT_INTERVAL", "2")
 
 	p, err := strconv.Atoi(sp)
     if err != nil {
