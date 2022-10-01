@@ -372,7 +372,7 @@ func main() {
 
 	Container = make (map[string]interface{})
 
-	host := getEnv("ADDRESS", "127.0.0.1:8080")
+	host := getEnv("ADDRESS", "localhost:8080")
 	storeInterval := getEnv("STORE_INTERVAL", "300")
 	storeFile := getEnv("STORE_FILE", "/tmp/devops-metrics-db.json")
 	restore := getEnv("RESTORE", "true")
