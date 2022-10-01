@@ -164,8 +164,8 @@ func ReportUpdate(p int, r int) error {
 				request, err := http.NewRequest(http.MethodPost, url.String(), payload)
 				if err != nil {
 					log.Printf("Error when request made")
-					log.Fatal(err)
-					return err
+					//log.Fatal(err)
+					//return err
 				}
 				
 				request.Header.Set("Content-Type", "application/json")
