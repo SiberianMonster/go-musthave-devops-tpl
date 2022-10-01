@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 type gauge float64
@@ -43,15 +44,21 @@ func RepositoryUpdate(mp Metrics) (error) {
 	v := reflect.ValueOf(mp)
 	var newValue float64
 	var newDelta int64
+	var oldDelta int64
 	fieldName, _ := v.Field(0).Interface().(string)
 	fieldType, _ := v.Field(1).Interface().(string)
 	
 	if fieldType == "counter" {
 		newDelta = *mp.Delta
 		log.Printf("New counter %d\n", newDelta)
-		if _, ok := Container[fieldName]; !ok {
-			valOld, _ := Container[fieldName].(float64)
-			oldDelta := int64(valOld) 
+		if _, ok := Container[fieldName]; ok {
+			if _, ok := Container[fieldName].(float64); ok {
+				valOld, _ := Container[fieldName].(float64)
+				oldDelta = int64(valOld) 
+			} else {
+				oldDelta, _ = Container[fieldName].(int64)
+			}
+			log.Printf("Old counter %f\n", oldDelta)
 			newDelta = oldDelta + newDelta
 		}
 		Container[fieldName] = newDelta
@@ -81,6 +88,17 @@ func RepositoryRetrieve(mp Metrics) (Metrics, error) {
 	}
 
 	return mp, nil
+
+}
+
+func RepositoryRetrieveString(mp Metrics) (string, error) {
+
+	v := reflect.ValueOf(mp)
+	var requestedValue string
+	fieldName, _ := v.Field(0).Interface().(string)
+	requestedValue = fmt.Sprintf("%v", Container[fieldName])
+
+	return requestedValue, nil
 
 }
 
@@ -271,7 +289,7 @@ func NewRouter() chi.Router {
 		}
 
 		var structParams = Metrics{ID: params,  MType: chi.URLParam(r, "type")}
-		retrievedMetrics, getErr := RepositoryRetrieve(structParams)
+		retrievedMetrics, getErr := RepositoryRetrieveString(structParams)
 
 		log.Println(retrievedMetrics)
 		if getErr != nil {
@@ -281,7 +299,7 @@ func NewRouter() chi.Router {
 		}
 
 		rw.WriteHeader(http.StatusOK)
-		json.NewEncoder(rw).Encode(retrievedMetrics)
+		rw.Write([]byte(retrievedMetrics))
 		
 
 	})
