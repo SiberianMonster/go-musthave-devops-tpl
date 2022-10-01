@@ -161,7 +161,7 @@ func ReportUpdate(p int, r int) error {
 				log.Print(string(body))
 
 				client := &http.Client{}
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer([]byte(body)))
 				request.Close = true
 				log.Printf("test_print")
 
