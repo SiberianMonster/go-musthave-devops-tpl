@@ -134,7 +134,7 @@ func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
-	for _ = range ticker.C {
+	for range ticker.C {
 		StaticFileSave(storeFile)
 	}
 }
@@ -235,8 +235,8 @@ func NewRouter() chi.Router {
 			return
 		}
 		if fieldType == "counter" {
-			fv_counter := int64(fv)
-			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Delta: &fv_counter}
+			fvCounter := int64(fv)
+			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Delta: &fvCounter}
 		} else {
 			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Value: &fv}
 		}
