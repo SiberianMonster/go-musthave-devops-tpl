@@ -146,6 +146,10 @@ func NewRouter() chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	if Container == nil {
+		Container = make (map[string]interface{})
+	}
 	
 	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
@@ -216,6 +220,7 @@ func NewRouter() chi.Router {
 
 	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
+		
 		fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
 		var structParams Metrics
 		if err != nil {
@@ -231,9 +236,9 @@ func NewRouter() chi.Router {
 		}
 		if fieldType == "counter" {
 			fv_counter := int64(fv)
-			structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: &fv_counter, MType: chi.URLParam(r, "type")}
+			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Delta: &fv_counter}
 		} else {
-			structParams = Metrics{ID: chi.URLParam(r, "name"), Value: &fv, MType: chi.URLParam(r, "type")}
+			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Value: &fv}
 		}
 
 		err = RepositoryUpdate(structParams)

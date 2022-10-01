@@ -140,7 +140,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += fmt.Sprintf("update")
+				url.Path += "update"
 
 				var metrics Metrics
 
