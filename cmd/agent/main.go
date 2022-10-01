@@ -160,7 +160,7 @@ func ReportUpdate(p int, r int) error {
 				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
 
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), &bytes.NewBuffer(body))
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
