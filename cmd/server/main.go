@@ -168,8 +168,8 @@ func NewRouter() chi.Router {
 		Container = make (map[string]interface{})
 	}
 	
-	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
+	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
 		var structParams Metrics
 
 		err := json.NewDecoder(r.Body).Decode(&structParams)
@@ -198,7 +198,7 @@ func NewRouter() chi.Router {
 		rw.Write([]byte(`{"status":"ok"}`))
 	})
 
-	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		var receivedParams Metrics
 
