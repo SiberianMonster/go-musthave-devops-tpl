@@ -168,7 +168,7 @@ func NewRouter() chi.Router {
 		Container = make (map[string]interface{})
 	}
 	
-	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 		var structParams Metrics
 
