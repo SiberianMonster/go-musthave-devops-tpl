@@ -246,6 +246,7 @@ func NewRouter() chi.Router {
 		err := json.NewDecoder(r.Body).Decode(&structParams)
 
 		if err != nil {
+			log.Printf("Wrong params")
 			rw.WriteHeader(http.StatusBadRequest)
 			resp["status"] = "wrong value"
 			jsonResp, err := json.Marshal(resp)
@@ -310,6 +311,9 @@ func NewRouter() chi.Router {
 		defer r.Body.Close()
 
 		if _, ok := Container[receivedParams.ID]; !ok {
+			log.Printf("missing params value")
+			receivedS, _ := json.Marshal(receivedParams)
+			log.Print(string(receivedS))
 			rw.WriteHeader(http.StatusNotFound)
 			resp["status"] = "missing parameter"
 			jsonResp, err := json.Marshal(resp)
@@ -372,7 +376,7 @@ func main() {
 
 	Container = make (map[string]interface{})
 
-	host := getEnv("ADDRESS", "localhost:8080")
+	host := getEnv("ADDRESS", "127.0.0.1:8080")
 	storeInterval := getEnv("STORE_INTERVAL", "300")
 	storeFile := getEnv("STORE_FILE", "/tmp/devops-metrics-db.json")
 	restore := getEnv("RESTORE", "true")
@@ -387,7 +391,7 @@ func main() {
         log.Fatal(err)
     }
 
-	//go StaticFileUpdate(storeInt, storeFile, restoreValue)
+	go StaticFileUpdate(storeInt, storeFile, restoreValue)
 
 	r := NewRouter()
 
