@@ -246,20 +246,35 @@ func NewRouter() chi.Router {
 
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("wrong value"))
+			resp["status"] = "wrong value"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 
 		if structParams.MType != "counter" && structParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("invalid type"))
+			resp["status"] = "invalid type"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 		
 		err = RepositoryUpdate(structParams)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("update failed"))
+			resp["status"] = "update failed"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 		s, _ := json.Marshal(Container)
