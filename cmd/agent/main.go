@@ -108,7 +108,7 @@ func ReportUpdate(p int, r int) error {
 	var typeOfS reflect.Type
 	var err error
 
-	h := getEnv("ADDRESS", "127.0.0.1:8080")
+	h := getEnv("ADDRESS", "localhost:8080")
 
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
