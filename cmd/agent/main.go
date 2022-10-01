@@ -156,7 +156,7 @@ func ReportUpdate(p int, r int) error {
 					metrics.Delta = &delta
 				}
 
-				body, _ := json.Marshal(metrics)
+				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
 
 				client := &http.Client{}
