@@ -167,79 +167,6 @@ func NewRouter() chi.Router {
 	if Container == nil {
 		Container = make (map[string]interface{})
 	}
-	
-	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		var structParams Metrics
-
-		err := json.NewDecoder(r.Body).Decode(&structParams)
-
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("wrong value"))
-			return
-		}
-
-		if structParams.MType != "counter" && structParams.MType != "gauge" {
-			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("invalid type"))
-			return
-		}
-		
-		err = RepositoryUpdate(structParams)
-		if err != nil {
-			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("update failed"))
-			return
-		}
-		s, _ := json.Marshal(Container)
-		log.Print(string(s))
-		rw.WriteHeader(http.StatusOK)
-		resp := make(map[string]string)
-		resp["status"] = "ok"
-		jsonResp, err := json.Marshal(resp)
-		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
-		}
-		rw.Write(jsonResp)
-	})
-
-	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		var receivedParams Metrics
-
-		err := json.NewDecoder(r.Body).Decode(&receivedParams)
-
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("wrong request"))
-			return
-		}
-
-		if _, ok := Container[receivedParams.ID]; !ok {
-			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("missing parameter"))
-			return
-		}
-
-		if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
-			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("invalid type"))
-			return
-		}
-
-		retrievedMetrics, getErr := RepositoryRetrieve(receivedParams)
-		log.Println(retrievedMetrics)
-		if getErr != nil {
-			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("value retrieval failed"))
-			return
-		}
-
-		rw.WriteHeader(http.StatusOK)
-		json.NewEncoder(rw).Encode(retrievedMetrics)
-		
-	})
 
 	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
@@ -307,6 +234,79 @@ func NewRouter() chi.Router {
 		rw.Write([]byte(retrievedMetrics))
 		
 
+	})
+	
+	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		var structParams Metrics
+
+		err := json.NewDecoder(r.Body).Decode(&structParams)
+
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("wrong value"))
+			return
+		}
+
+		if structParams.MType != "counter" && structParams.MType != "gauge" {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("invalid type"))
+			return
+		}
+		
+		err = RepositoryUpdate(structParams)
+		if err != nil {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("update failed"))
+			return
+		}
+		s, _ := json.Marshal(Container)
+		log.Print(string(s))
+		rw.WriteHeader(http.StatusOK)
+		resp := make(map[string]string)
+		resp["status"] = "ok"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		}
+		rw.Write(jsonResp)
+	})
+
+	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		var receivedParams Metrics
+
+		err := json.NewDecoder(r.Body).Decode(&receivedParams)
+
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			rw.Write([]byte("wrong request"))
+			return
+		}
+
+		if _, ok := Container[receivedParams.ID]; !ok {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("missing parameter"))
+			return
+		}
+
+		if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
+			rw.WriteHeader(http.StatusNotImplemented)
+			rw.Write([]byte("invalid type"))
+			return
+		}
+
+		retrievedMetrics, getErr := RepositoryRetrieve(receivedParams)
+		log.Println(retrievedMetrics)
+		if getErr != nil {
+			rw.WriteHeader(http.StatusNotFound)
+			rw.Write([]byte("value retrieval failed"))
+			return
+		}
+
+		rw.WriteHeader(http.StatusOK)
+		json.NewEncoder(rw).Encode(retrievedMetrics)
+		
 	})
 
 	r.Get("/", func(rw http.ResponseWriter, r *http.Request) {
