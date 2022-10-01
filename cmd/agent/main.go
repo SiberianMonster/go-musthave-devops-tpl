@@ -160,24 +160,22 @@ func ReportUpdate(p int, r int) error {
 					metrics.Delta = &delta
 				}
 
-				body, _ := json.Marshal(&metrics)
+				body, _ := json.Marshal(metrics)
 				log.Print(string(body))
-				payload := strings.NewReader(string(body))
 
-				request, err := http.NewRequest(http.MethodPost, url.String(), payload)
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
 					return err
 				}
+				request.Close = true
 				
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				response, err := client.Do(request)
-				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
-					log.Printf("Status code %q\n", response.Status)
 					log.Fatal(err)
 					return err
 
