@@ -238,7 +238,7 @@ func NewRouter() chi.Router {
 
 	})
 	
-	r.HandleFunc("/update", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		var structParams Metrics
 
