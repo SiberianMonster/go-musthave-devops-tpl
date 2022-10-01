@@ -177,6 +177,7 @@ func ReportUpdate(p int, r int) error {
 				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
+					log.Printf("Status code %q\n", response.Status)
 					log.Fatal(err)
 					return err
 
