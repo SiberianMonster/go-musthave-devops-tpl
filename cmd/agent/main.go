@@ -138,7 +138,7 @@ func ReportUpdate(p int, r int) error {
 
 			for i := 0; i < v.NumField(); i++ {
 
-				time.Sleep(5 * time.Millisecond)
+				time.Sleep(500 * time.Millisecond)
 
 				url := url.URL{
 					Scheme: "http",
