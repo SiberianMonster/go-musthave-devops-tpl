@@ -10,9 +10,9 @@ import (
 	"runtime"
 	"time"
 	"encoding/json"
-	"bytes"
 	"strconv"
 	"os"
+	"strings"
 )
 
 type gauge float64
@@ -120,7 +120,9 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{},
+	}
 
 	for {
 
@@ -159,19 +161,20 @@ func ReportUpdate(p int, r int) error {
 
 				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
+				payload := strings.NewReader(string(body))
 
-				request, err := http.NewRequest(http.MethodPost, url.String(), &bytes.NewBuffer(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), payload)
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
 					return err
-
 				}
-				request.Close = true
+				
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				request.Header.Set("Connection", "Keep-Alive")
 				response, err := client.Do(request)
+				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Fatal(err)
