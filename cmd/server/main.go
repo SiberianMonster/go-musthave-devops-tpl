@@ -198,11 +198,11 @@ func NewRouter() chi.Router {
 		rw.Write([]byte(`{"status":"ok"}`))
 	})
 
-	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
-		var structParams Metrics
+		var receivedParams Metrics
 
-		err := json.NewDecoder(r.Body).Decode(&structParams)
+		err := json.NewDecoder(r.Body).Decode(&receivedParams)
 
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
@@ -210,19 +210,19 @@ func NewRouter() chi.Router {
 			return
 		}
 
-		if _, ok := Container[structParams.ID]; !ok {
+		if _, ok := Container[receivedParams.ID]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte("missing parameter"))
 			return
 		}
 
-		if structParams.MType != "counter" && structParams.MType != "gauge" {
+		if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte("invalid type"))
 			return
 		}
 
-		retrievedMetrics, getErr := RepositoryRetrieve(structParams)
+		retrievedMetrics, getErr := RepositoryRetrieve(receivedParams)
 		log.Println(retrievedMetrics)
 		if getErr != nil {
 			rw.WriteHeader(http.StatusNotFound)
