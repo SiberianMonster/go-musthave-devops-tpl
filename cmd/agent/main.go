@@ -121,7 +121,6 @@ func ReportUpdate(p int, r int) error {
 
 	m.PollCount = 0
 	client := &http.Client{
-        CheckRedirect: nil,
 		Timeout: 3 * time.Second,
     }
 
@@ -177,7 +176,6 @@ func ReportUpdate(p int, r int) error {
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				
 				response, err := client.Do(request)
-				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Fatal(err)

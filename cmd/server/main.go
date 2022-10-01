@@ -241,9 +241,9 @@ func NewRouter() chi.Router {
 	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		rw.Header().Set("Connection", "close")
-		var structParams Metrics
+		var updateParams Metrics
 
-		err := json.NewDecoder(r.Body).Decode(&structParams)
+		err := json.NewDecoder(r.Body).Decode(&updateParams)
 
 		if err != nil {
 			log.Printf("Wrong params")
@@ -379,7 +379,7 @@ func main() {
 	host := getEnv("ADDRESS", "127.0.0.1:8080")
 	storeInterval := getEnv("STORE_INTERVAL", "300")
 	storeFile := getEnv("STORE_FILE", "/tmp/devops-metrics-db.json")
-	restore := getEnv("RESTORE", "true")
+	restore := getEnv("RESTORE", "false")
 
 	restoreValue, err := strconv.ParseBool(restore)
 	if err != nil {
