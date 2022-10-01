@@ -195,7 +195,13 @@ func NewRouter() chi.Router {
 		s, _ := json.Marshal(Container)
 		log.Print(string(s))
 		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(`{"status":"ok"}`))
+		resp := make(map[string]string)
+		resp["status"] = "ok"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		}
+		rw.Write(jsonResp)
 	})
 
 	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
