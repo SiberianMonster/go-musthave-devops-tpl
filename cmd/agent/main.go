@@ -172,8 +172,8 @@ func ReportUpdate(p int, r int) error {
 				request.Header.Set("Connection", "Keep-Alive")
 				response, err := client.Do(request)
 				if err != nil {
-					log.Fatal(err)
-					return err
+					
+					return 
 
 				}
 				defer response.Body.Close()
