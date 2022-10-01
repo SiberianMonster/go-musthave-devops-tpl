@@ -171,11 +171,11 @@ func ReportUpdate(p int, r int) error {
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				request.Header.Set("Connection", "Keep-Alive")
 				response, err := client.Do(request)
-				if err != nil {
+				//if err != nil {
 					
-					return 
+				//	return err
 
-				}
+				//}
 				defer response.Body.Close()
 				// response status
 				log.Printf("Status code %q\n", response.Status)
