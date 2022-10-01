@@ -120,7 +120,10 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
-	client := http.DefaultClient
+	client := &http.Client{
+        CheckRedirect: nil,
+		Timeout: 3 * time.Second,
+    }
 
 	for {
 
@@ -140,7 +143,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += "update"
+				url.Path += "update/"
 
 				var metrics Metrics
 
@@ -170,7 +173,6 @@ func ReportUpdate(p int, r int) error {
 				
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
-				request.Header.Set("Connection", "Keep-Alive")
 				response, err := client.Do(request)
 				request.Close = true
 				if err != nil {
