@@ -273,7 +273,7 @@ func NewRouter() chi.Router {
 		rw.Write(jsonResp)
 	})
 
-	r.HandleFunc("/value", func(rw http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		var receivedParams Metrics
 
