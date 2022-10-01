@@ -140,7 +140,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += "update/"
+				url.Path += "update"
 
 				var metrics Metrics
 
@@ -164,8 +164,8 @@ func ReportUpdate(p int, r int) error {
 				request, err := http.NewRequest(http.MethodPost, url.String(), payload)
 				if err != nil {
 					log.Printf("Error when request made")
-					//log.Fatal(err)
-					//return err
+					log.Fatal(err)
+					return err
 				}
 				
 				request.Header.Set("Content-Type", "application/json")
@@ -175,14 +175,14 @@ func ReportUpdate(p int, r int) error {
 				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
-					//log.Printf("Status code %q\n", response.Status)
-					//log.Fatal(err)
-					//return err
+					log.Printf("Status code %q\n", response.Status)
+					log.Fatal(err)
+					return err
 
 				}
-				//defer response.Body.Close()
+				defer response.Body.Close()
 				// response status
-				//log.Printf("Status code %q\n", response.Status)
+				log.Printf("Status code %q\n", response.Status)
 			}
 
 		}
