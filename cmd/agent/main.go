@@ -120,6 +120,7 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
+	client := &http.Client{}
 
 	for {
 
@@ -159,9 +160,7 @@ func ReportUpdate(p int, r int) error {
 				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
 
-				client := &http.Client{}
-				//request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				request, err := http.NewRequest("POST", "http://localhost:8080/update/", bytes.NewBuffer(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				if err != nil {
 					log.Fatal(err)
 					return err
