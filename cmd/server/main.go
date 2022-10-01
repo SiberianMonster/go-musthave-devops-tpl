@@ -58,7 +58,6 @@ func RepositoryUpdate(mp Metrics) (error) {
 			} else {
 				oldDelta, _ = Container[fieldName].(int64)
 			}
-			log.Printf("Old counter %f\n", oldDelta)
 			newDelta = oldDelta + newDelta
 		}
 		Container[fieldName] = newDelta
