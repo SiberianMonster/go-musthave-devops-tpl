@@ -11,7 +11,6 @@ import (
 	"time"
 	"encoding/json"
 	"os"
-	"bytes"
 )
 
 type gauge float64
