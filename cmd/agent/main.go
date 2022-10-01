@@ -193,7 +193,7 @@ func ReportUpdate(p int, r int) error {
 func main() {
 
 	
-	err = ReportUpdate(2, 10)
+	err := ReportUpdate(2, 10)
 	if err != nil {
 		log.Fatal(err)
 	}
