@@ -162,6 +162,7 @@ func ReportUpdate(p int, r int) error {
 
 				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				if err != nil {
+					log.Printf("Error when request made")
 					log.Fatal(err)
 					return err
 
@@ -171,11 +172,12 @@ func ReportUpdate(p int, r int) error {
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				request.Header.Set("Connection", "Keep-Alive")
 				response, err := client.Do(request)
-				//if err != nil {
-					
-				//	return err
+				if err != nil {
+					log.Printf("Error when response received")
+					log.Fatal(err)
+					return err
 
-				//}
+				}
 				defer response.Body.Close()
 				// response status
 				log.Printf("Status code %q\n", response.Status)
