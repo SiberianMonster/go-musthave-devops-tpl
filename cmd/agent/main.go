@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"strconv"
 	"os"
-	"strings"
+	"bytes"
 )
 
 type gauge float64
