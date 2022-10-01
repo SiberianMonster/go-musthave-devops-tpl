@@ -109,7 +109,7 @@ func ReportUpdate(p int, r int) error {
 	var typeOfS reflect.Type
 	var err error
 
-	host := getEnv("ADDRESS", "127.0.0.1:8080")
+	h := getEnv("ADDRESS", "127.0.0.1:8080")
 
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
@@ -140,7 +140,7 @@ func ReportUpdate(p int, r int) error {
 					Scheme: "http",
 					Host:   h,
 				}
-				url.Path += fmt.Sprintf("update/")
+				url.Path += fmt.Sprintf("update")
 
 				var metrics Metrics
 
@@ -158,6 +158,7 @@ func ReportUpdate(p int, r int) error {
 				}
 
 				body, _ := json.Marshal(metrics)
+				log.Print(string(body))
 
 				client := &http.Client{}
 				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
@@ -192,15 +193,15 @@ func main() {
 
 	p, err := strconv.Atoi(sp)
     if err != nil {
-        return err
+        log.Fatal(err)
     }
 
 	r, err := strconv.Atoi(sr)
     if err != nil {
-        return err
+        log.Fatal(err)
     }
 	
-	err := ReportUpdate(p, r)
+	err = ReportUpdate(p, r)
 	if err != nil {
 		log.Fatal(err)
 	}

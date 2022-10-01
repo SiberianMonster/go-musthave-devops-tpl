@@ -38,6 +38,8 @@ func stringInSlice(a string, list []string) bool {
 
 func RepositoryUpdate(mp Metrics) (error) {
 
+	smp, _ := json.Marshal(mp)
+	log.Print(string(smp))
 	v := reflect.ValueOf(mp)
 	var newValue float64
 	var newDelta int64
@@ -45,7 +47,8 @@ func RepositoryUpdate(mp Metrics) (error) {
 	fieldType, _ := v.Field(1).Interface().(string)
 	
 	if fieldType == "counter" {
-		newDelta, _ = v.Field(3).Interface().(int64)
+		newDelta = *mp.Delta
+		log.Printf("New counter %d\n", newDelta)
 		if _, ok := Container[fieldName]; !ok {
 			valOld, _ := Container[fieldName].(float64)
 			oldDelta := int64(valOld) 
@@ -53,7 +56,8 @@ func RepositoryUpdate(mp Metrics) (error) {
 		}
 		Container[fieldName] = newDelta
 	} else {
-		newValue, _ = v.Field(3).Interface().(float64)
+		newValue = *mp.Value
+		log.Printf("New gauge %f\n", newValue)
 		Container[fieldName] = newValue
 	}
 
@@ -213,6 +217,7 @@ func NewRouter() chi.Router {
 	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
+		var structParams Metrics
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte("wrong value"))
@@ -226,9 +231,9 @@ func NewRouter() chi.Router {
 		}
 		if fieldType == "counter" {
 			fv_counter := int64(fv)
-			var structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: &fv_counter, MType: chi.URLParam(r, "type")}
+			structParams = Metrics{ID: chi.URLParam(r, "name"), Delta: &fv_counter, MType: chi.URLParam(r, "type")}
 		} else {
-			var structParams = Metrics{ID: chi.URLParam(r, "name"), Value: &fv, MType: chi.URLParam(r, "type")}
+			structParams = Metrics{ID: chi.URLParam(r, "name"), Value: &fv, MType: chi.URLParam(r, "type")}
 		}
 
 		err = RepositoryUpdate(structParams)
@@ -249,7 +254,7 @@ func NewRouter() chi.Router {
 		params := chi.URLParam(r, "name")
 		fieldType := chi.URLParam(r, "type")
 
-		if _, ok := sharedMetrics.Container[params]; !ok {
+		if _, ok := Container[params]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte("missing parameter"))
 			return
