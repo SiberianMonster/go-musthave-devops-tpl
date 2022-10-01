@@ -164,6 +164,8 @@ func NewRouter() chi.Router {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	resp := make(map[string]string)
+
 	if Container == nil {
 		Container = make (map[string]interface{})
 	}
@@ -263,7 +265,6 @@ func NewRouter() chi.Router {
 		s, _ := json.Marshal(Container)
 		log.Print(string(s))
 		rw.WriteHeader(http.StatusOK)
-		resp := make(map[string]string)
 		resp["status"] = "ok"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
@@ -280,19 +281,34 @@ func NewRouter() chi.Router {
 
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("wrong request"))
+			resp["status"] = "wrong request"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 
 		if _, ok := Container[receivedParams.ID]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("missing parameter"))
+			resp["status"] = "missing parameter"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 
 		if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
-			rw.Write([]byte("invalid type"))
+			resp["status"] = "invalid type"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 
@@ -300,7 +316,12 @@ func NewRouter() chi.Router {
 		log.Println(retrievedMetrics)
 		if getErr != nil {
 			rw.WriteHeader(http.StatusNotFound)
-			rw.Write([]byte("value retrieval failed"))
+			resp["status"] = "value retrieval failed"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			}
+			rw.Write(jsonResp)
 			return
 		}
 
