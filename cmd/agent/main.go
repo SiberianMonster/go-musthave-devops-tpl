@@ -169,12 +169,13 @@ func ReportUpdate(p int, r int) error {
 					log.Fatal(err)
 					return err
 				}
-				request.Close = true
+				
 				
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				
 				response, err := client.Do(request)
+				request.Close = true
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Fatal(err)
@@ -206,6 +207,7 @@ func main() {
     if err != nil {
         log.Fatal(err)
     }
+	time.Sleep(8 * time.Second)
 	
 	err = ReportUpdate(p, r)
 	if err != nil {
