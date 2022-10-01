@@ -160,14 +160,14 @@ func ReportUpdate(p int, r int) error {
 				log.Print(string(body))
 
 				client := &http.Client{}
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				defer request.Body.Close()
-
+				//request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+				request, err := http.NewRequest("POST", "http://localhost:8080/update/", bytes.NewBuffer(body))
 				if err != nil {
 					log.Fatal(err)
 					return err
 
 				}
+				request.Close = true
 				request.Header.Set("Content-Type", "application/json")
 				request.Header.Set("Content-Length", strconv.Itoa(len(body)))
 				request.Header.Set("Connection", "Keep-Alive")
