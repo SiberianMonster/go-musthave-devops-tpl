@@ -157,11 +157,13 @@ func ReportUpdate(p int, r int) error {
 				}
 
 				body, _ := json.Marshal(&metrics)
+				log.Printf("test_print")
 				log.Print(string(body))
 
 				client := &http.Client{}
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				request.Close = true
+				log.Printf("test_print")
 
 				if err != nil {
 					log.Fatal(err)
@@ -170,6 +172,7 @@ func ReportUpdate(p int, r int) error {
 				}
 				request.Header.Set("Content-Type", "application/json")
 				response, err := client.Do(request)
+				log.Printf("test_print")
 				if err != nil {
 					log.Fatal(err)
 					return err
