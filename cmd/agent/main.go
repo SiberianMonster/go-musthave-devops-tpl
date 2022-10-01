@@ -28,6 +28,8 @@ func getEnv(key, fallback string) string {
 
 
 type metricsContainer struct {
+	PollCount int64
+	RandomValue,
 	Alloc,
 	BuckHashSys,
 	Frees,
@@ -53,10 +55,8 @@ type metricsContainer struct {
 	Sys,
 	TotalAlloc,
 	GCCPUFraction,
-	RandomValue,
 	NumForcedGC,
 	NumGC float64
-	PollCount int64
 }
 
 func MetricsUpdate(m metricsContainer, rtm runtime.MemStats) metricsContainer {
