@@ -182,7 +182,7 @@ func ReportUpdate(p int, r int) error {
 				}
 				defer response.Body.Close()
 				// response status
-				log.Printf("Status code %q\n", response.Status)
+				//log.Printf("Status code %q\n", response.Status)
 			}
 
 		}
