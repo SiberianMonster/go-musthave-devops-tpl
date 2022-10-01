@@ -163,6 +163,7 @@ func ReportUpdate(p int, r int) error {
 				client := &http.Client{}
 				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				request.Close = true
+				defer request.Body.Close()
 				log.Printf("test_print")
 
 				if err != nil {
