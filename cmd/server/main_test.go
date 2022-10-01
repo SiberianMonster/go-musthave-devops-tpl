@@ -57,6 +57,6 @@ func TestRouter(t *testing.T) {
 	resp, body = testRequest(t, ts, "/update/", wrongMetrics)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
-	assert.Equal(t, `invalid type`, body)
+	assert.Equal(t, `{"status":"invalid type"}`, body)
 
 }

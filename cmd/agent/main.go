@@ -120,9 +120,7 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
-	client := &http.Client{
-		Transport: &http.Transport{},
-	}
+	client := http.DefaultClient
 
 	for {
 
