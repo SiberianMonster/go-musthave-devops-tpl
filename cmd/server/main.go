@@ -258,7 +258,7 @@ func NewRouter() chi.Router {
 		}
 		defer r.Body.Close()
 
-		if structParams.MType != "counter" && structParams.MType != "gauge" {
+		if updateParams.MType != "counter" && updateParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			resp["status"] = "invalid type"
 			jsonResp, err := json.Marshal(resp)
@@ -269,7 +269,7 @@ func NewRouter() chi.Router {
 			return
 		}
 		
-		err = RepositoryUpdate(structParams)
+		err = RepositoryUpdate(updateParams)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotImplemented)
 			resp["status"] = "update failed"
