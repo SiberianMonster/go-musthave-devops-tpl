@@ -240,6 +240,7 @@ func NewRouter() chi.Router {
 	
 	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
+		rw.Header().Set("Connection", "close")
 		var structParams Metrics
 
 		err := json.NewDecoder(r.Body).Decode(&structParams)
@@ -254,6 +255,7 @@ func NewRouter() chi.Router {
 			rw.Write(jsonResp)
 			return
 		}
+		defer r.Body.Close()
 
 		if structParams.MType != "counter" && structParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
@@ -290,6 +292,7 @@ func NewRouter() chi.Router {
 
 	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
+		rw.Header().Set("Connection", "close")
 		var receivedParams Metrics
 
 		err := json.NewDecoder(r.Body).Decode(&receivedParams)
@@ -304,6 +307,7 @@ func NewRouter() chi.Router {
 			rw.Write(jsonResp)
 			return
 		}
+		defer r.Body.Close()
 
 		if _, ok := Container[receivedParams.ID]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
