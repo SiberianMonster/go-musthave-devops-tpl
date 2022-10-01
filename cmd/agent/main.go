@@ -160,7 +160,8 @@ func ReportUpdate(p int, r int) error {
 				log.Print(string(body))
 
 				client := &http.Client{}
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewReader(body))
+				request.Close = true
 
 				if err != nil {
 					log.Fatal(err)
@@ -187,8 +188,8 @@ func ReportUpdate(p int, r int) error {
 func main() {
 
 	
-	sp := getEnv("POLL_INTERVAL", "1")
-	sr := getEnv("REPORT_INTERVAL", "2")
+	sp := getEnv("POLL_INTERVAL", "2")
+	sr := getEnv("REPORT_INTERVAL", "10")
 
 	p, err := strconv.Atoi(sp)
     if err != nil {

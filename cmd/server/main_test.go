@@ -43,7 +43,7 @@ func TestRouter(t *testing.T) {
 		Value: &floatValue, 
 	}
 
-	resp, body := testRequest(t, ts, "/update", metrics)
+	resp, body := testRequest(t, ts, "/update/", metrics)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, `{"status":"ok"}`, body)
@@ -54,7 +54,7 @@ func TestRouter(t *testing.T) {
 		Value: &floatValue, 
 	}
 
-	resp, body = testRequest(t, ts, "/update", wrongMetrics)
+	resp, body = testRequest(t, ts, "/update/", wrongMetrics)
 	defer resp.Body.Close()
 	assert.Equal(t, http.StatusNotImplemented, resp.StatusCode)
 	assert.Equal(t, `invalid type`, body)
