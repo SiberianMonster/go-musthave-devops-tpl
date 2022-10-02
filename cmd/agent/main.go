@@ -163,15 +163,12 @@ func ReportUpdate(p int, r int) error {
 				log.Print(string(body))
 
 				request, err := http.NewRequest(http.MethodPost, url.String(), nil)
-				request.Close = true
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
 					return err
 				}
 				
-				
-				request.Header.Set("Content-Type", "application/json")				
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
