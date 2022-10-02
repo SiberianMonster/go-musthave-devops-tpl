@@ -321,7 +321,7 @@ func main() {
 
 	Container = make (map[string]interface{})
 
-	host := "127.0.0.1:8080"
+	host := ":8080"
 	
 
 	r := NewRouter()
