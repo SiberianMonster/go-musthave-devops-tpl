@@ -160,18 +160,16 @@ func ReportUpdate(p int, r int) error {
 				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
 
-				client := &http.Client{}
-
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				if err != nil {
-					log.Printf("Error when request made")
-					log.Fatal(err)
-					return err
-				}
-
-				request.Header.Set("Content-Type", "application/json")	
-				response, err := client.Do(request)
-				log.Printf("Status code %q\n", response.Status)
+				response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
+				//request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
+				//if err != nil {
+				//	log.Printf("Error when request made")
+				//	log.Fatal(err)
+				//	return err
+				//}
+				//
+				//request.Header.Set("Content-Type", "application/json")	
+				//response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Printf("Error type %q\n", err)
@@ -179,10 +177,10 @@ func ReportUpdate(p int, r int) error {
 					return err
 
 				} else {
-					
+					defer response.Body.Close()
 					log.Printf("Status code %q\n", response.Status)
 				}
-				defer response.Body.Close()
+				
 				// response status
 				//log.Printf("Status code %q\n", response.Status)
 			}
