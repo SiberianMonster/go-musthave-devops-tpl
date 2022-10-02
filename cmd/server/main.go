@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"net/http"
 	"reflect"
@@ -13,6 +11,9 @@ import (
 	"time"
 	"fmt"
 	"flag"
+	"io"
+	"compress/gzip"
+	"strings"
 )
 
 type gauge float64
@@ -29,6 +30,7 @@ type Metrics struct {
 var err error
 var Container map[string]interface{}
 var host, storeInterval, storeFile, restore *string
+var resp map[string]string
 
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -38,6 +40,23 @@ func stringInSlice(a string, list []string) bool {
 	}
 	return false
 }
+
+func getEnv(key string, fallback *string) *string {
+    if value, ok := os.LookupEnv(key); ok {
+        return &value
+    }
+    return fallback
+}
+
+type gzipWriter struct {
+    http.ResponseWriter
+    Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+    // w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
+    return w.Writer.Write(b)
+} 
 
 func RepositoryUpdate(mp Metrics) (error) {
 
@@ -158,96 +177,87 @@ func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
 	}
 }
 
+func updateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
-func NewRouter() chi.Router {
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-
-	resp := make(map[string]string)
-
-	if Container == nil {
-		Container = make (map[string]interface{})
-	}
-
-	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		
-		fv, err := strconv.ParseFloat(chi.URLParam(r, "value"), 64)
-		var structParams Metrics
-		if err != nil {
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "application/json")
+	fv, err := strconv.ParseFloat(r.URL.Query().Get("value"), 64)
+	var structParams Metrics
+	if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte("wrong value"))
 			return
-		}
-		fieldType := chi.URLParam(r, "type")
-		if fieldType != "counter" && fieldType != "gauge" {
+	}
+	fieldType := r.URL.Query().Get("type")
+	if fieldType != "counter" && fieldType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte("wrong value"))
 			return
-		}
-		if fieldType == "counter" {
+	}
+	if fieldType == "counter" {
 			fvCounter := int64(fv)
-			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Delta: &fvCounter}
-		} else {
-			structParams = Metrics{ID: chi.URLParam(r, "name"), MType: chi.URLParam(r, "type"), Value: &fv}
-		}
+			structParams = Metrics{ID: r.URL.Query().Get("name"), MType: r.URL.Query().Get("type"), Delta: &fvCounter}
+	} else {
+			structParams = Metrics{ID: r.URL.Query().Get("name"), MType: r.URL.Query().Get("type"), Value: &fv}
+	}
 
-		err = RepositoryUpdate(structParams)
-		if err != nil {
+	err = RepositoryUpdate(structParams)
+	if err != nil {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte("update failed"))
 			return
-		}
-		s, _ := json.Marshal(Container)
-		log.Print(string(s))
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(`{"status":"ok"}`))
-	})
+	}
+	s, _ := json.Marshal(Container)
+	log.Print(string(s))
+	rw.WriteHeader(http.StatusOK)
+	rw.Write([]byte(`{"status":"ok"}`))
+}
 
-	r.Get("/value/{type}/{name}", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
+func valueStringHandler(rw http.ResponseWriter, r *http.Request) {
+		
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 
-		params := chi.URLParam(r, "name")
-		fieldType := chi.URLParam(r, "type")
+	params := r.URL.Query().Get("name")
+	fieldType := r.URL.Query().Get("type")
 
-		if _, ok := Container[params]; !ok {
+	if _, ok := Container[params]; !ok {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte("missing parameter"))
 			return
-		}
-		if fieldType != "counter" && fieldType != "gauge" {
+	}
+	if fieldType != "counter" && fieldType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			rw.Write([]byte("wrong value"))
 			return
-		}
+	}
 
-		var structParams = Metrics{ID: params,  MType: chi.URLParam(r, "type")}
-		retrievedMetrics, getErr := RepositoryRetrieveString(structParams)
+	var structParams = Metrics{ID: params,  MType: r.URL.Query().Get("type")}
+	retrievedMetrics, getErr := RepositoryRetrieveString(structParams)
 
-		log.Println(retrievedMetrics)
-		if getErr != nil {
+	log.Println(retrievedMetrics)
+	if getErr != nil {
 			rw.WriteHeader(http.StatusNotFound)
 			rw.Write([]byte("value retrieval failed"))
 			return
-		}
+	}
 
 		rw.WriteHeader(http.StatusOK)
 		rw.Write([]byte(retrievedMetrics))
 		
 
-	})
+}
 	
-	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("Connection", "close")
-		var updateParams Metrics
+func updateJsonHandler(rw http.ResponseWriter, r *http.Request) {
+	
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Connection", "close")
+	var updateParams Metrics
 
-		err := json.NewDecoder(r.Body).Decode(&updateParams)
+	err := json.NewDecoder(r.Body).Decode(&updateParams)
 
-		if err != nil {
+	if err != nil {
 			log.Printf("Wrong params")
 			rw.WriteHeader(http.StatusBadRequest)
 			resp["status"] = "wrong value"
@@ -257,10 +267,10 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
-		defer r.Body.Close()
+	}
+	defer r.Body.Close()
 
-		if updateParams.MType != "counter" && updateParams.MType != "gauge" {
+	if updateParams.MType != "counter" && updateParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			resp["status"] = "invalid type"
 			jsonResp, err := json.Marshal(resp)
@@ -269,10 +279,10 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
+	}
 		
-		err = RepositoryUpdate(updateParams)
-		if err != nil {
+	err = RepositoryUpdate(updateParams)
+	if err != nil {
 			rw.WriteHeader(http.StatusNotImplemented)
 			resp["status"] = "update failed"
 			jsonResp, err := json.Marshal(resp)
@@ -281,26 +291,41 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
-		s, _ := json.Marshal(Container)
-		log.Print(string(s))
-		rw.WriteHeader(http.StatusOK)
-		resp["status"] = "ok"
-		jsonResp, err := json.Marshal(resp)
-		if err != nil {
+	}
+	s, _ := json.Marshal(Container)
+	log.Print(string(s))
+	rw.WriteHeader(http.StatusOK)
+	resp["status"] = "ok"
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
 			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
-		}
-		rw.Write(jsonResp)
-	})
+	}
+	rw.Write(jsonResp)
+}
 
-	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("Connection", "close")
-		var receivedParams Metrics
+func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 
-		err := json.NewDecoder(r.Body).Decode(&receivedParams)
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Connection", "close")
+	var receivedParams Metrics
+	var reader io.Reader
 
-		if err != nil {
+    if r.Header.Get(`Content-Encoding`) == `gzip` {
+        gz, err := gzip.NewReader(r.Body)
+        if err != nil {
+            http.Error(rw, err.Error(), http.StatusInternalServerError)
+            return
+        }
+        reader = gz
+        defer gz.Close()
+    } else {
+        reader = r.Body
+    }
+
+	err := json.NewDecoder(reader).Decode(&receivedParams)
+
+	if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			resp["status"] = "wrong request"
 			jsonResp, err := json.Marshal(resp)
@@ -309,10 +334,10 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
-		defer r.Body.Close()
+	}
+	defer r.Body.Close()
 
-		if _, ok := Container[receivedParams.ID]; !ok {
+	if _, ok := Container[receivedParams.ID]; !ok {
 			log.Printf("missing params value")
 			receivedS, _ := json.Marshal(receivedParams)
 			log.Print(string(receivedS))
@@ -324,9 +349,9 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
+	}
 
-		if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
+	if receivedParams.MType != "counter" && receivedParams.MType != "gauge" {
 			rw.WriteHeader(http.StatusNotImplemented)
 			resp["status"] = "invalid type"
 			jsonResp, err := json.Marshal(resp)
@@ -335,11 +360,11 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
+	}
 
-		retrievedMetrics, getErr := RepositoryRetrieve(receivedParams)
-		log.Println(retrievedMetrics)
-		if getErr != nil {
+	retrievedMetrics, getErr := RepositoryRetrieve(receivedParams)
+	log.Println(retrievedMetrics)
+	if getErr != nil {
 			rw.WriteHeader(http.StatusNotFound)
 			resp["status"] = "value retrieval failed"
 			jsonResp, err := json.Marshal(resp)
@@ -348,29 +373,34 @@ func NewRouter() chi.Router {
 			}
 			rw.Write(jsonResp)
 			return
-		}
+	}
 
-		rw.WriteHeader(http.StatusOK)
-		json.NewEncoder(rw).Encode(retrievedMetrics)
+	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(retrievedMetrics)
 		
-	})
-
-	r.Get("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
-
-		s, _ := json.Marshal(Container)
-		log.Print(string(s))
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(string(s)))
-	})
-	return r
 }
 
-func getEnv(key string, fallback *string) *string {
-    if value, ok := os.LookupEnv(key); ok {
-        return &value
-    }
-    return fallback
+func genericHandler (rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
+
+	s, _ := json.Marshal(Container)
+	log.Print(string(s))
+	rw.WriteHeader(http.StatusOK)
+	rw.Write([]byte(string(s)))
+}
+	
+
+func gzipHandler(h http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+            h.ServeHTTP(w, r)
+            return
+        }
+        w.Header().Set("Content-Encoding", "gzip")
+        gz := gzip.NewWriter(w)
+        defer gz.Close()
+        h.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+    })
 }
 
 func init() {
@@ -400,12 +430,20 @@ func main() {
 
 	go StaticFileUpdate(storeInt, *storeFile, restoreValue)
 
-	r := NewRouter()
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
+	mux.HandleFunc("/value/{type}/{name}", valueStringHandler)
+	mux.HandleFunc("/update/", updateJsonHandler)
+	mux.HandleFunc("/value/", valueJsonHandler)
+	mux.HandleFunc("/", genericHandler)
 
 	// запуск сервера с адресом localhost, порт 8080
 	//server := &http.Server{
 	//    Addr: "127.0.0.1:8080",
 	//}
-	log.Fatal(http.ListenAndServe(*host, r))
+	if err := http.ListenAndServe(*host, mux); err != nil {
+        log.Fatal(err)
+    }
 	StaticFileSave(*storeFile)
 }
