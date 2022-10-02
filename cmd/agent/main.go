@@ -178,8 +178,11 @@ func ReportUpdate(p int, r int) error {
 					//log.Fatal(err)
 					return err
 
+				} else {
+					defer response.Body.Close()
+					log.Printf("Status code %q\n", response.Status)
 				}
-				defer response.Body.Close()
+				
 				// response status
 				//log.Printf("Status code %q\n", response.Status)
 			}
