@@ -327,8 +327,6 @@ func updateHandler(rw http.ResponseWriter, r *http.Request) {
 func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
-	rw.Header().Set("Content-Type", "application/json")
-	rw.Header().Set("Connection", "close")
 	var receivedParams Metrics
 	var reader io.Reader
 
@@ -354,6 +352,7 @@ func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 			fieldType := urlPart[2]
 		
 			if _, ok := Container[params]; !ok {
+					rw.Header().Set("Content-Type", "application/json")
 					rw.WriteHeader(http.StatusNotFound)
 					resp["status"] = "missing parameter"
 					jsonResp, err := json.Marshal(resp)
@@ -364,6 +363,7 @@ func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 					return
 			}
 			if fieldType != "counter" && fieldType != "gauge" {
+					rw.Header().Set("Content-Type", "application/json")
 					rw.WriteHeader(http.StatusNotImplemented)
 					resp["status"] = "invalid type"
 					jsonResp, err := json.Marshal(resp)
@@ -379,6 +379,7 @@ func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 		
 			log.Println(retrievedMetrics)
 			if getErr != nil {
+					rw.Header().Set("Content-Type", "application/json")
 					rw.WriteHeader(http.StatusNotFound)
 					resp["status"] = "value retrieval failed"
 					jsonResp, err := json.Marshal(resp)
@@ -389,10 +390,12 @@ func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
 					return
 			}
 		
+			rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 			rw.WriteHeader(http.StatusOK)
-			json.NewEncoder(rw).Encode(retrievedMetrics)
+			rw.Write([]byte(retrievedMetrics))
 
 	} else {
+		rw.Header().Set("Content-Type", "application/json")
 		defer r.Body.Close()
 
 		if _, ok := Container[receivedParams.ID]; !ok {
