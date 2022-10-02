@@ -112,7 +112,7 @@ func NewRouter() chi.Router {
 	resp := make(map[string]string)
 
 	if Container == nil {
-		Container = make (map[string]interface{})
+		Container = make(map[string]interface{})
 	}
 
 	r.HandleFunc("/update/{type}/{name}/{value}", func(rw http.ResponseWriter, r *http.Request) {
@@ -185,7 +185,6 @@ func NewRouter() chi.Router {
 	
 	r.HandleFunc("/update/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("Connection", "close")
 		var updateParams Metrics
 
 		err := json.NewDecoder(r.Body).Decode(&updateParams)
@@ -238,7 +237,6 @@ func NewRouter() chi.Router {
 
 	r.HandleFunc("/value/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("Connection", "close")
 		var receivedParams Metrics
 
 		err := json.NewDecoder(r.Body).Decode(&receivedParams)
@@ -319,7 +317,7 @@ func getEnv(key, fallback string) string {
 
 func main() {
 
-	Container = make (map[string]interface{})
+	Container = make(map[string]interface{})
 
 	host := ":8080"
 	

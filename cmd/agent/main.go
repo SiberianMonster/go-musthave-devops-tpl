@@ -107,7 +107,7 @@ func ReportUpdate(p int, r int) error {
 	var typeOfS reflect.Type
 	var err error
 
-	h := getEnv("ADDRESS", "127.0.0.1:8080")
+	h := getEnv("ADDRESS", "localhost:8080")
 
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
@@ -119,10 +119,6 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
 
 	for {
 
@@ -161,8 +157,10 @@ func ReportUpdate(p int, r int) error {
 					metrics.Delta = &delta
 				}
 
-				body, _ := json.Marshal(metrics)
+				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
+
+				client := &http.Client{}
 
 				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				if err != nil {
@@ -170,9 +168,10 @@ func ReportUpdate(p int, r int) error {
 					log.Fatal(err)
 					return err
 				}
-				
-				request.Header.Set("Content-Type", "application/json")				
+
+				request.Header.Set("Content-Type", "application/json")	
 				response, err := client.Do(request)
+				log.Printf("Status code %q\n", response.Status)
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Printf("Error type %q\n", err)
@@ -180,10 +179,10 @@ func ReportUpdate(p int, r int) error {
 					return err
 
 				} else {
-					defer response.Body.Close()
+					
 					log.Printf("Status code %q\n", response.Status)
 				}
-				
+				defer response.Body.Close()
 				// response status
 				//log.Printf("Status code %q\n", response.Status)
 			}
