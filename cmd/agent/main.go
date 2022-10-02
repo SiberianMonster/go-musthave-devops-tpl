@@ -174,13 +174,14 @@ func ReportUpdate(p int, r int) error {
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
-					log.Fatal(err)
+					log.Printf("Error type %q\n", err)
+					//log.Fatal(err)
 					return err
 
 				}
 				defer response.Body.Close()
 				// response status
-				log.Printf("Status code %q\n", response.Status)
+				//log.Printf("Status code %q\n", response.Status)
 			}
 
 		}
