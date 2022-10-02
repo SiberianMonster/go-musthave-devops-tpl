@@ -11,6 +11,7 @@ import (
 	"time"
 	"encoding/json"
 	"os"
+	"bytes"
 )
 
 type gauge float64
@@ -162,13 +163,12 @@ func ReportUpdate(p int, r int) error {
 				body, _ := json.Marshal(metrics)
 				log.Print(string(body))
 
-				request, err := http.NewRequest(http.MethodPost, url.String(), nil)
+				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
 					return err
 				}
-				
 				
 				request.Header.Set("Content-Type", "application/json")				
 				response, err := client.Do(request)
@@ -178,7 +178,7 @@ func ReportUpdate(p int, r int) error {
 					return err
 
 				}
-				//defer response.Body.Close()
+				defer response.Body.Close()
 				// response status
 				log.Printf("Status code %q\n", response.Status)
 			}
