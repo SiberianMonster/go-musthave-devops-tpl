@@ -12,6 +12,9 @@ import (
 	"encoding/json"
 	"os"
 	"bytes"
+	"net/http/httptrace"
+	"io/ioutil"
+	"io"
 )
 
 type gauge float64
@@ -106,6 +109,7 @@ func ReportUpdate(p int, r int) error {
 	var v reflect.Value
 	var typeOfS reflect.Type
 	var err error
+	var metrics Metrics
 
 	h := getEnv("ADDRESS", "localhost:8080")
 
@@ -119,6 +123,11 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
+
+	clientTrace := &httptrace.ClientTrace{
+        GotConn: func(info httptrace.GotConnInfo) { log.Printf("conn was reused: %t", info.Reused) },
+    }
+    traceCtx := httptrace.WithClientTrace(context.Background(), clientTrace)
 
 	for {
 
@@ -142,8 +151,6 @@ func ReportUpdate(p int, r int) error {
 				}
 				url.Path += "update/"
 
-				var metrics Metrics
-
 				if v.Field(i).Kind() == reflect.Float64 {
 					metrics.ID =  typeOfS.Field(i).Name   
 					metrics.MType =  "gauge"      
@@ -160,26 +167,27 @@ func ReportUpdate(p int, r int) error {
 				body, _ := json.Marshal(&metrics)
 				log.Print(string(body))
 
-				response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
-				//request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				//if err != nil {
-				//	log.Printf("Error when request made")
-				//	log.Fatal(err)
-				//	return err
-				//}
-				//
-				//request.Header.Set("Content-Type", "application/json")	
-				//response, err := client.Do(request)
+				request, err := http.NewRequestWithContext(traceCtx, http.MethodPost, url.String(), bytes.NewBuffer(body))
+				if err != nil {
+					log.Printf("Error when request made")
+					log.Fatal(err)
+					return err
+				}
+				
+				request.Header.Set("Content-Type", "application/json")	
+				response, err := http.DefaultClient.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Printf("Error type %q\n", err)
 					//log.Fatal(err)
 					return err
 
-				} else {
-					defer response.Body.Close()
-					log.Printf("Status code %q\n", response.Status)
+				} 
+				if _, err := io.Copy(ioutil.Discard, response.Body); err != nil {
+					log.Fatal(err)
 				}
+				log.Printf("Status code %q\n", response.Status)
+				response.Body.Close()
 				
 				// response status
 				//log.Printf("Status code %q\n", response.Status)
