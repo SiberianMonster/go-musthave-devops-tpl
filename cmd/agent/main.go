@@ -15,6 +15,7 @@ import (
 	"net/http/httptrace"
 	"io/ioutil"
 	"io"
+	"context"
 )
 
 type gauge float64
