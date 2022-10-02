@@ -13,15 +13,18 @@ import (
 	"strconv"
 	"os"
 	"bytes"
+	"flag"
 )
 
 type gauge float64
 type counter int64
 
+var h, sp, sr *string
 
-func getEnv(key, fallback string) string {
+
+func getEnv(key string, fallback *string) *string {
     if value, ok := os.LookupEnv(key); ok {
-        return value
+        return &value
     }
     return fallback
 }
@@ -108,8 +111,6 @@ func ReportUpdate(p int, r int) error {
 	var typeOfS reflect.Type
 	var err error
 
-	h := getEnv("ADDRESS", "127.0.0.1:8080")
-
 	if p >= r {
 		err = errors.New("reportduration needs to be larger than pollduration")
 		return err
@@ -142,7 +143,7 @@ func ReportUpdate(p int, r int) error {
 
 				url := url.URL{
 					Scheme: "http",
-					Host:   h,
+					Host:   *h,
 				}
 				url.Path += "update/"
 
@@ -191,18 +192,24 @@ func ReportUpdate(p int, r int) error {
 	}
 }
 
+func init() {
+
+	h = getEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	sp = getEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL"))
+	sr = getEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL"))
+
+}
+
 func main() {
 
-	
-	sp := getEnv("POLL_INTERVAL", "2")
-	sr := getEnv("REPORT_INTERVAL", "10")
+	flag.Parse()
 
-	p, err := strconv.Atoi(sp)
+	p, err := strconv.Atoi(*sp)
     if err != nil {
         log.Fatal(err)
     }
 
-	r, err := strconv.Atoi(sr)
+	r, err := strconv.Atoi(*sr)
     if err != nil {
         log.Fatal(err)
     }

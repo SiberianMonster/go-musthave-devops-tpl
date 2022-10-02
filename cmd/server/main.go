@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 	"fmt"
+	"flag"
 )
 
 type gauge float64
@@ -27,6 +28,7 @@ type Metrics struct {
 
 var err error
 var Container map[string]interface{}
+var host, storeInterval, storeFile, restore *string
 
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
@@ -364,34 +366,39 @@ func NewRouter() chi.Router {
 	return r
 }
 
-func getEnv(key, fallback string) string {
+func getEnv(key string, fallback *string) *string {
     if value, ok := os.LookupEnv(key); ok {
-        return value
+        return &value
     }
     return fallback
 }
 
-
-func main() {
+func init() {
 
 	Container = make (map[string]interface{})
 
-	host := getEnv("ADDRESS", "127.0.0.1:8080")
-	storeInterval := getEnv("STORE_INTERVAL", "300")
-	storeFile := getEnv("STORE_FILE", "/tmp/devops-metrics-db.json")
-	restore := getEnv("RESTORE", "false")
+	host = getEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	storeInterval = getEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
+	storeFile = getEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
+	restore = getEnv("RESTORE", flag.String("r", "false", "RESTORE"))
 
-	restoreValue, err := strconv.ParseBool(restore)
+}
+
+func main() {
+
+	flag.Parse()
+
+	restoreValue, err := strconv.ParseBool(*restore)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	storeInt, err := strconv.Atoi(storeInterval)
+	storeInt, err := strconv.Atoi(*storeInterval)
     if err != nil {
         log.Fatal(err)
     }
 
-	go StaticFileUpdate(storeInt, storeFile, restoreValue)
+	go StaticFileUpdate(storeInt, *storeFile, restoreValue)
 
 	r := NewRouter()
 
@@ -399,6 +406,6 @@ func main() {
 	//server := &http.Server{
 	//    Addr: "127.0.0.1:8080",
 	//}
-	log.Fatal(http.ListenAndServe(host, r))
-	StaticFileSave(storeFile)
+	log.Fatal(http.ListenAndServe(*host, r))
+	StaticFileSave(*storeFile)
 }
