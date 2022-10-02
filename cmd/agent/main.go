@@ -169,6 +169,8 @@ func ReportUpdate(p int, r int) error {
 					return err
 				}
 				
+				
+				request.Header.Set("Content-Type", "application/json")				
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
@@ -176,7 +178,7 @@ func ReportUpdate(p int, r int) error {
 					return err
 
 				}
-				defer response.Body.Close()
+				//defer response.Body.Close()
 				// response status
 				log.Printf("Status code %q\n", response.Status)
 			}
