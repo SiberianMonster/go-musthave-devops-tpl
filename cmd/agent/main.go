@@ -129,6 +129,10 @@ func ReportUpdate(p int, r int) error {
         GotConn: func(info httptrace.GotConnInfo) { log.Printf("conn was reused: %t", info.Reused) },
     }
     traceCtx := httptrace.WithClientTrace(context.Background(), clientTrace)
+	client := &http.Client{
+		Transport: &http.Transport{
+			DisableKeepAlives:   true,
+		}}
 
 	for {
 
@@ -176,7 +180,7 @@ func ReportUpdate(p int, r int) error {
 				}
 				
 				request.Header.Set("Content-Type", "application/json")	
-				response, err := http.DefaultClient.Do(request)
+				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
 					log.Printf("Error type %q\n", err)
