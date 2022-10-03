@@ -167,6 +167,7 @@ func ReportUpdate(p int, r int) error {
 				}
 
 				request.Header.Set("Content-Type", "application/json")
+				request.Header.Set("Accept", "application/json")
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
