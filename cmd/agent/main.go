@@ -164,7 +164,6 @@ func ReportUpdate(p int, r int) error {
 				log.Print(string(body))
 
 				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				request.Close = true
 				if err != nil {
 					log.Printf("Error when request made")
 					log.Fatal(err)
