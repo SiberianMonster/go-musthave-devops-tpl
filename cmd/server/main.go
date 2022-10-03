@@ -180,7 +180,7 @@ func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
 	}
 }
 
-func updateJsonHandler(rw http.ResponseWriter, r *http.Request) {
+func updateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
@@ -308,7 +308,7 @@ func updateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 }
 
-func valueJsonHandler(rw http.ResponseWriter, r *http.Request) {
+func valueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
@@ -492,8 +492,8 @@ func main() {
 	//mux := http.NewServeMux()
 	r := mux.NewRouter()
 
-	r.HandleFunc("/update/", updateJsonHandler)
-	r.HandleFunc("/value/", valueJsonHandler)
+	r.HandleFunc("/update/", updateJSONHandler)
+	r.HandleFunc("/value/", valueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
 	r.HandleFunc("/value/{type}/{name}", valueStringHandler)
 
@@ -520,7 +520,7 @@ func main() {
 	}()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM,syscall.SIGHUP,syscall.SIGQUIT,syscall.SIGKILL)
 	<-sigChan
 
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
