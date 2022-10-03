@@ -176,7 +176,9 @@ func ReportUpdate(p int, r int) error {
 					continue
 
 				}
-				defer response.Body.Close()
+				if err := response.Body.Close; err !=nil {
+					log.Fatal(err)
+				}
 				// response status
 				log.Printf("Status code %q\n", response.Status)
 			}
