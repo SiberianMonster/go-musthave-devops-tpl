@@ -507,9 +507,6 @@ func main() {
 	srv := &http.Server{
 		Handler: r,
 		Addr:    *host,
-		// enforce timeouts
-		WriteTimeout: 5 * time.Second,
-		ReadTimeout:  5 * time.Second,
 	}
 
 	go func() {
