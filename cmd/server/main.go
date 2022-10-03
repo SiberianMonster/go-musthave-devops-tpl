@@ -135,7 +135,8 @@ func RepositoryRetrieveString(mp Metrics) (string, error) {
 
 func StaticFileSave(storeFile string) {
 
-	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	//file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(storeFile, os.O_CREATE, 0777)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -478,7 +479,7 @@ func init() {
 	Container = make(map[string]interface{})
 
 	host = getEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	storeInterval = strings.Replace(*getEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
+	storeInterval = strings.Replace(*getEnv("STORE_INTERVAL", flag.String("i", "1", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = getEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = getEnv("RESTORE", flag.String("r", "false", "RESTORE"))
 
