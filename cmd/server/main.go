@@ -171,6 +171,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 			if err != nil {
 			} else {
 				err = json.Unmarshal([]byte(data), &Container)
+				log.Print(string(data))
 				if err != nil {
 					log.Printf("no json data to decode")
 				}
@@ -497,7 +498,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	StaticFileUpload (*storeFile, restoreValue)
+	StaticFileUpload(*storeFile, restoreValue)
 
 	go StaticFileUpdate(storeInt, *storeFile)
 
