@@ -158,7 +158,7 @@ func StaticFileSave(storeFile string) {
 	log.Printf("saved json to file")
 }
 
-func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
+func StaticFileUpload(storeFile string, restore bool) {
 
 	if restore {
 		file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
@@ -179,6 +179,9 @@ func StaticFileUpdate(storeInt int, storeFile string, restore bool) {
 		}
 
 	}
+}
+
+func StaticFileUpdate(storeInt int, storeFile string) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
@@ -494,7 +497,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	go StaticFileUpdate(storeInt, *storeFile, restoreValue)
+	StaticFileUpload (*storeFile, restoreValue)
+
+	go StaticFileUpdate(storeInt, *storeFile)
 
 	//mux := http.NewServeMux()
 	r := mux.NewRouter()
