@@ -209,7 +209,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	time.Sleep(8 * time.Second)
 
 	err = ReportUpdate(p, r)
 	if err != nil {
