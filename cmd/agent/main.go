@@ -119,9 +119,7 @@ func ReportUpdate(p int, r int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(r))
 
 	m.PollCount = 0
-	client := &http.Client{
-		Timeout: 3 * time.Second,
-	}
+	client := &http.Client{}
 
 	for {
 
@@ -136,8 +134,6 @@ func ReportUpdate(p int, r int) error {
 			// send stats to the server
 
 			for i := 0; i < v.NumField(); i++ {
-
-				time.Sleep(500 * time.Millisecond)
 
 				url := url.URL{
 					Scheme: "http",
