@@ -15,6 +15,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"context"
+	"errors"
+	"os/signal"
+	"syscall"
 )
 
 type gauge float64
@@ -504,9 +508,27 @@ func main() {
 		Handler: r,
 		Addr:    *host,
 		// enforce timeouts
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  5 * time.Second,
 	}
-	log.Fatal(srv.ListenAndServe())
-	StaticFileSave(*storeFile)
+
+	go func() {
+		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+		log.Println("Stopped serving new connections.")
+	}()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
+	defer shutdownRelease()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	log.Println("Graceful shutdown complete.")
+
 }
