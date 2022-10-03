@@ -171,6 +171,7 @@ func ReportUpdate(p int, r int) error {
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
+					continue
 
 				}
 				defer response.Body.Close()
