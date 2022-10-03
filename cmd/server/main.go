@@ -33,7 +33,8 @@ type Metrics struct {
 
 var err error
 var Container map[string]interface{}
-var host, storeInterval, storeFile, restore *string
+var host, storeFile, restore *string
+var storeInterval string
 var resp map[string]string
 
 func stringInSlice(a string, list []string) bool {
@@ -467,7 +468,7 @@ func init() {
 	Container = make(map[string]interface{})
 
 	host = getEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	storeInterval = getEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
+	storeInterval = strings.Replace(*getEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = getEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = getEnv("RESTORE", flag.String("r", "false", "RESTORE"))
 
@@ -482,7 +483,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	storeInt, err := strconv.Atoi(*storeInterval)
+	storeInt, err := strconv.Atoi(storeInterval)
 	if err != nil {
 		log.Fatal(err)
 	}
