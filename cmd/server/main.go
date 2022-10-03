@@ -100,12 +100,18 @@ func RepositoryUpdate(mp Metrics) error {
 func RepositoryRetrieve(mp Metrics) (Metrics, error) {
 
 	v := reflect.ValueOf(mp)
+	var delta int64
 
 	fieldName, _ := v.Field(0).Interface().(string)
 	fieldType, _ := v.Field(1).Interface().(string)
 
 	if fieldType == "counter" {
-		delta := Container[fieldName].(int64)
+		if _, ok := Container[fieldName].(float64); ok {
+			valOld := Container[fieldName].(float64)
+			delta = int64(valOld)
+		} else {
+			delta = Container[fieldName].(int64)
+		}
 		mp.Delta = &delta
 	} else {
 		value := Container[fieldName].(float64)
