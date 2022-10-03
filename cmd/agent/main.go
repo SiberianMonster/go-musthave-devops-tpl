@@ -14,12 +14,14 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+	"strings"
 )
 
 type gauge float64
 type counter int64
 
-var h, sp, sr *string
+var h *string
+var sp, sr string
 
 func getEnv(key string, fallback *string) *string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -187,8 +189,8 @@ func ReportUpdate(p int, r int) error {
 func init() {
 
 	h = getEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	sp = getEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL"))
-	sr = getEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL"))
+	sp = strings.Replace(*getEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
+	sr = strings.Replace(*getEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
 
 }
 
@@ -196,12 +198,12 @@ func main() {
 
 	flag.Parse()
 
-	p, err := strconv.Atoi(*sp)
+	p, err := strconv.Atoi(sp)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	r, err := strconv.Atoi(*sr)
+	r, err := strconv.Atoi(sr)
 	if err != nil {
 		log.Fatal(err)
 	}
