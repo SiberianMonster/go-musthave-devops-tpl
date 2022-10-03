@@ -540,5 +540,6 @@ func main() {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
+	StaticFileSave(*storeFile)
 
 }
