@@ -1,22 +1,21 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"encoding/json"
-	"bytes"
-	"github.com/gorilla/mux"
 )
-
 
 func testRequest(t *testing.T, ts *httptest.Server, path string, metrics Metrics) (*http.Response, string) {
 
 	body, _ := json.Marshal(metrics)
-	
+
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, bytes.NewBuffer(body))
 	require.NoError(t, err)
 
@@ -39,7 +38,7 @@ func TestRouter(t *testing.T) {
 	r.HandleFunc("/value/", valueJsonHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
 	r.HandleFunc("/value/{type}/{name}", valueStringHandler)
-	
+
 	r.HandleFunc("/", genericHandler)
 	r.Use(gzipHandler)
 
@@ -47,10 +46,10 @@ func TestRouter(t *testing.T) {
 	defer ts.Close()
 	floatValue := 2.0
 
-	metrics := Metrics {
-		ID: "Alloc",
+	metrics := Metrics{
+		ID:    "Alloc",
 		MType: "gauge",
-		Value: &floatValue, 
+		Value: &floatValue,
 	}
 
 	resp, body := testRequest(t, ts, "/update/", metrics)
@@ -58,10 +57,10 @@ func TestRouter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, `{"status":"ok"}`, body)
 
-	wrongMetrics := Metrics {
-		ID: "Alloc",
+	wrongMetrics := Metrics{
+		ID:    "Alloc",
 		MType: "othertype",
-		Value: &floatValue, 
+		Value: &floatValue,
 	}
 
 	resp, body = testRequest(t, ts, "/update/", wrongMetrics)

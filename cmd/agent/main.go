@@ -1,19 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
+	"flag"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"runtime"
-	"time"
-	"encoding/json"
 	"strconv"
-	"os"
-	"bytes"
-	"flag"
+	"time"
 )
 
 type gauge float64
@@ -21,14 +21,12 @@ type counter int64
 
 var h, sp, sr *string
 
-
 func getEnv(key string, fallback *string) *string {
-    if value, ok := os.LookupEnv(key); ok {
-        return &value
-    }
-    return fallback
+	if value, ok := os.LookupEnv(key); ok {
+		return &value
+	}
+	return fallback
 }
-
 
 type metricsContainer struct {
 	PollCount int64
@@ -101,7 +99,7 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
-} 
+}
 
 func ReportUpdate(p int, r int) error {
 
@@ -123,7 +121,7 @@ func ReportUpdate(p int, r int) error {
 	m.PollCount = 0
 	client := &http.Client{
 		Timeout: 3 * time.Second,
-    }
+	}
 
 	for {
 
@@ -150,14 +148,14 @@ func ReportUpdate(p int, r int) error {
 				var metrics Metrics
 
 				if v.Field(i).Kind() == reflect.Float64 {
-					metrics.ID =  typeOfS.Field(i).Name   
-					metrics.MType =  "gauge"      
+					metrics.ID = typeOfS.Field(i).Name
+					metrics.MType = "gauge"
 					value := v.Field(i).Interface().(float64)
 					metrics.Value = &value
 
 				} else {
-					metrics.ID =  typeOfS.Field(i).Name   
-					metrics.MType =  "counter"      
+					metrics.ID = typeOfS.Field(i).Name
+					metrics.MType = "counter"
 					delta := v.Field(i).Interface().(int64)
 					metrics.Delta = &delta
 				}
@@ -172,9 +170,8 @@ func ReportUpdate(p int, r int) error {
 					log.Fatal(err)
 					return err
 				}
-				
-				
-				request.Header.Set("Content-Type", "application/json")				
+
+				request.Header.Set("Content-Type", "application/json")
 				response, err := client.Do(request)
 				if err != nil {
 					log.Printf("Error when response received")
@@ -205,16 +202,16 @@ func main() {
 	flag.Parse()
 
 	p, err := strconv.Atoi(*sp)
-    if err != nil {
-        log.Fatal(err)
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	r, err := strconv.Atoi(*sr)
-    if err != nil {
-        log.Fatal(err)
-    }
+	if err != nil {
+		log.Fatal(err)
+	}
 	time.Sleep(8 * time.Second)
-	
+
 	err = ReportUpdate(p, r)
 	if err != nil {
 		log.Fatal(err)
