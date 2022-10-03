@@ -9,6 +9,7 @@ import (
 	"testing"
 	"encoding/json"
 	"bytes"
+	"github.com/gorilla/mux"
 )
 
 
@@ -31,7 +32,16 @@ func testRequest(t *testing.T, ts *httptest.Server, path string, metrics Metrics
 }
 
 func TestRouter(t *testing.T) {
-	r := NewRouter()
+
+	r := mux.NewRouter()
+
+	r.HandleFunc("/update/", updateJsonHandler)
+	r.HandleFunc("/value/", valueJsonHandler)
+	r.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
+	r.HandleFunc("/value/{type}/{name}", valueStringHandler)
+	
+	r.HandleFunc("/", genericHandler)
+	r.Use(gzipHandler)
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
