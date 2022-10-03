@@ -34,8 +34,8 @@ func TestRouter(t *testing.T) {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/update/", updateJsonHandler)
-	r.HandleFunc("/value/", valueJsonHandler)
+	r.HandleFunc("/update/", updateJSONHandler)
+	r.HandleFunc("/value/", valueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
 	r.HandleFunc("/value/{type}/{name}", valueStringHandler)
 
