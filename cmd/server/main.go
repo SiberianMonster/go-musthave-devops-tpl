@@ -520,7 +520,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM,syscall.SIGHUP,syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
 	defer shutdownRelease()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
