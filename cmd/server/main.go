@@ -3,7 +3,9 @@ package main
 import (
 	"bufio"
 	"compress/gzip"
+	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -11,14 +13,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
-	"context"
-	"errors"
-	"os/signal"
 	"syscall"
+	"time"
 )
 
 type gauge float64
@@ -145,7 +145,7 @@ func StaticFileSave(storeFile string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if len(data) > 3 { 
+	if len(data) > 3 {
 		log.Print(string(data))
 		if _, err := writer.Write(data); err != nil {
 			log.Fatal(err)
@@ -158,7 +158,7 @@ func StaticFileSave(storeFile string) {
 	}
 	file.Close()
 	log.Printf("saved json to file")
-	
+
 }
 
 func StaticFileUpload(storeFile string, restore bool) {
@@ -269,9 +269,10 @@ func updateStringHandler(rw http.ResponseWriter, r *http.Request) {
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
 
-	urlPart := strings.Split(r.URL.Path, "/")
-	log.Printf(urlPart[3])
-	fv, err := strconv.ParseFloat(urlPart[4], 64)
+	urlPart := mux.Vars(r)
+	log.Printf(urlPart["name"])
+
+	fv, err := strconv.ParseFloat(urlPart["value"], 64)
 	var structParams Metrics
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -283,7 +284,7 @@ func updateStringHandler(rw http.ResponseWriter, r *http.Request) {
 		rw.Write(jsonResp)
 		return
 	}
-	fieldType := urlPart[2]
+	fieldType := urlPart["type"]
 	if fieldType != "counter" && fieldType != "gauge" {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "missing type"
@@ -296,9 +297,9 @@ func updateStringHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 	if fieldType == "counter" {
 		fvCounter := int64(fv)
-		structParams = Metrics{ID: urlPart[3], MType: urlPart[2], Delta: &fvCounter}
+		structParams = Metrics{ID: urlPart["name"], MType: urlPart["type"], Delta: &fvCounter}
 	} else {
-		structParams = Metrics{ID: urlPart[3], MType: urlPart[2], Value: &fv}
+		structParams = Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
 	}
 
 	err = RepositoryUpdate(structParams)
@@ -402,11 +403,11 @@ func valueStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 
-	urlPart := strings.Split(r.URL.Path, "/")
-	log.Printf(urlPart[3])
+	urlPart := mux.Vars(r)
+	log.Printf(urlPart["name"])
 
-	params := urlPart[3]
-	fieldType := urlPart[2]
+	params := urlPart["name"]
+	fieldType := urlPart["type"]
 
 	if _, ok := Container[params]; !ok {
 		rw.Header().Set("Content-Type", "application/json")
@@ -431,7 +432,7 @@ func valueStringHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var structParams = Metrics{ID: params, MType: r.URL.Query().Get("type")}
+	var structParams = Metrics{ID: params, MType: urlPart["name"]}
 	retrievedMetrics, getErr := RepositoryRetrieveString(structParams)
 
 	log.Println(retrievedMetrics)
@@ -533,7 +534,7 @@ func main() {
 	}()
 
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM,syscall.SIGHUP,syscall.SIGQUIT)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
