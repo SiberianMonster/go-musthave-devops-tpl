@@ -13,8 +13,8 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-	"time"
 	"strings"
+	"time"
 )
 
 type gauge float64
@@ -68,7 +68,8 @@ func MetricsUpdate(m metricsContainer, rtm runtime.MemStats) metricsContainer {
 	m.BuckHashSys = float64(rtm.BuckHashSys)
 	m.Frees = float64(rtm.Frees)
 	m.GCCPUFraction = float64(rtm.GCCPUFraction)
-	m.GCSys = float64(rtm.HeapAlloc)
+	m.GCSys = float64(rtm.GCSys)
+	m.HeapAlloc = float64(rtm.HeapAlloc)
 	m.HeapIdle = float64(rtm.HeapIdle)
 	m.HeapInuse = float64(rtm.HeapInuse)
 	m.HeapObjects = float64(rtm.HeapObjects)
