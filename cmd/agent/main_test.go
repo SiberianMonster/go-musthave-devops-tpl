@@ -21,7 +21,7 @@ func TestReportUpdate(t *testing.T) {
 			pollduration:   3,
 			reportduration: 3,
 			want: want{
-				errvalue: errors.New("reportduration needs to be larger than pollduration"),
+				errvalue: errors.New("reportduration needs to be larger than pollduration."),
 			},
 		},
 		{
