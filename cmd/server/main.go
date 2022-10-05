@@ -30,7 +30,7 @@ func init() {
 	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
 	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
-	restore = generalutils.GetEnv("RESTORE", flag.String("r", "false", "RESTORE"))
+	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 
 }
 
