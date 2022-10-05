@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
 	"log"
 	"net/http"
 	"net/url"

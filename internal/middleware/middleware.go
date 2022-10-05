@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"net/http"
 	"strings"
-	"go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
 )
 
 func GzipHandler(h http.Handler) http.Handler {

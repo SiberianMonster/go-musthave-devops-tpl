@@ -9,7 +9,7 @@ import (
 	"os"
 	"reflect"
 	"time"
-	"go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
 )
 
 var err error

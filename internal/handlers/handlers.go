@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"go-musthave-devops-tpl/internal/general_utils"
-	"go-musthave-devops-tpl/internal/storage"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 )
 
 var err error
