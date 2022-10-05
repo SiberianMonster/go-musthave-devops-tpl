@@ -6,13 +6,16 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go-musthave-devops-tpl/internal/general_utils"
+	"go-musthave-devops-tpl/internal/handlers"
+	"go-musthave-devops-tpl/internal/middleware"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, path string, metrics Metrics) (*http.Response, string) {
+func testRequest(t *testing.T, ts *httptest.Server, path string, metrics general_utils.Metrics) (*http.Response, string) {
 
 	body, _ := json.Marshal(metrics)
 
@@ -34,19 +37,19 @@ func TestRouter(t *testing.T) {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/update/", updateJSONHandler)
-	r.HandleFunc("/value/", valueJSONHandler)
-	r.HandleFunc("/update/{type}/{name}/{value}", updateStringHandler)
-	r.HandleFunc("/value/{type}/{name}", valueStringHandler)
+	r.HandleFunc("/update/", handlers.UpdateJSONHandler)
+	r.HandleFunc("/value/", handlers.ValueJSONHandler)
+	r.HandleFunc("/update/{type}/{name}/{value}", handlers.UpdateStringHandler)
+	r.HandleFunc("/value/{type}/{name}", handlers.ValueStringHandler)
 
-	r.HandleFunc("/", genericHandler)
-	r.Use(gzipHandler)
+	r.HandleFunc("/", handlers.GenericHandler)
+	r.Use(middleware.GzipHandler)
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	floatValue := 2.0
 
-	metrics := Metrics{
+	metrics := general_utils.Metrics{
 		ID:    "Alloc",
 		MType: "gauge",
 		Value: &floatValue,
@@ -57,7 +60,7 @@ func TestRouter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, `{"status":"ok"}`, body)
 
-	wrongMetrics := Metrics{
+	wrongMetrics := general_utils.Metrics{
 		ID:    "Alloc",
 		MType: "othertype",
 		Value: &floatValue,
