@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"io/ioutil"
@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-func testRequest(t *testing.T, ts *httptest.Server, path string, metrics general_utils.Metrics) (*http.Response, string) {
+func testRequest(t *testing.T, ts *httptest.Server, path string, metrics generalutils.Metrics) (*http.Response, string) {
 
 	body, _ := json.Marshal(metrics)
 
@@ -49,7 +49,7 @@ func TestRouter(t *testing.T) {
 	defer ts.Close()
 	floatValue := 2.0
 
-	metrics := general_utils.Metrics{
+	metrics := generalutils.Metrics{
 		ID:    "Alloc",
 		MType: "gauge",
 		Value: &floatValue,
@@ -60,7 +60,7 @@ func TestRouter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, `{"status":"ok"}`, body)
 
-	wrongMetrics := general_utils.Metrics{
+	wrongMetrics := generalutils.Metrics{
 		ID:    "Alloc",
 		MType: "othertype",
 		Value: &floatValue,

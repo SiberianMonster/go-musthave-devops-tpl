@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"net/http"
 	"strings"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 )
 
 func GzipHandler(h http.Handler) http.Handler {
@@ -27,7 +27,7 @@ func GzipHandler(h http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", "gzip")
 		gz := gzip.NewWriter(w)
 		defer gz.Close()
-		h.ServeHTTP(general_utils.GzipWriter{ResponseWriter: w, Writer: gz}, r)
+		h.ServeHTTP(generalutils.GzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }
 

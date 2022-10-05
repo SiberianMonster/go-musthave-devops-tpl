@@ -9,12 +9,12 @@ import (
 	"os"
 	"reflect"
 	"time"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 )
 
 var err error
 
-func RepositoryUpdate(mp general_utils.Metrics) error {
+func RepositoryUpdate(mp generalutils.Metrics) error {
 
 	smp, err := json.Marshal(mp)
 	if err != nil {
@@ -29,67 +29,67 @@ func RepositoryUpdate(mp general_utils.Metrics) error {
 	fieldName := v.Field(0).Interface().(string)
 	fieldType := v.Field(1).Interface().(string)
 
-	if fieldType == general_utils.Counter {
+	if fieldType == generalutils.Counter {
 		newDelta = *mp.Delta
 		log.Printf("New counter %d\n", newDelta)
-		if _, ok := general_utils.Container[fieldName]; ok {
-			if _, ok := general_utils.Container[fieldName].(float64); ok {
-				valOld, ok := general_utils.Container[fieldName].(float64)
+		if _, ok := generalutils.Container[fieldName]; ok {
+			if _, ok := generalutils.Container[fieldName].(float64); ok {
+				valOld, ok := generalutils.Container[fieldName].(float64)
 				if !ok {
-					err = errors.New("Failed metrics retrieval")
+					err = errors.New("failed metrics retrieval")
 					log.Fatalf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
 					return err
 				}
 				oldDelta = int64(valOld)
 			} else {
-				oldDelta, ok = general_utils.Container[fieldName].(int64)
+				oldDelta, ok = generalutils.Container[fieldName].(int64)
 				if !ok {
-					err = errors.New("Failed metrics retrieval")
+					err = errors.New("failed metrics retrieval")
 					log.Fatalf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
 					return err
 				}
 			}
 			newDelta = oldDelta + newDelta
 		}
-		general_utils.Container[fieldName] = newDelta
+		generalutils.Container[fieldName] = newDelta
 	} else {
 		newValue = *mp.Value
 		log.Printf("New gauge %f\n", newValue)
-		general_utils.Container[fieldName] = newValue
+		generalutils.Container[fieldName] = newValue
 	}
 
 	return nil
 
 }
 
-func RepositoryRetrieve(mp general_utils.Metrics) (general_utils.Metrics, error) {
+func RepositoryRetrieve(mp generalutils.Metrics) (generalutils.Metrics, error) {
 
 	v := reflect.ValueOf(mp)
 	var delta int64
 
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
-		err = errors.New("Failed metrics retrieval")
+		err = errors.New("failed metrics retrieval")
 		log.Fatalf("Error happened in validating metrics name. Err: %s", err)
 		return mp, err
 	}
 	fieldType, ok := v.Field(1).Interface().(string)
 	if !ok {
-		err = errors.New("Failed metrics retrieval")
+		err = errors.New("failed metrics retrieval")
 		log.Fatalf("Error happened in validating metrics type. Err: %s", err)
 		return mp, err
 	}
 
-	if fieldType == general_utils.Counter {
-		if _, ok := general_utils.Container[fieldName].(float64); ok {
-			valOld := general_utils.Container[fieldName].(float64)
+	if fieldType == generalutils.Counter {
+		if _, ok := generalutils.Container[fieldName].(float64); ok {
+			valOld := generalutils.Container[fieldName].(float64)
 			delta = int64(valOld)
 		} else {
-			delta = general_utils.Container[fieldName].(int64)
+			delta = generalutils.Container[fieldName].(int64)
 		}
 		mp.Delta = &delta
 	} else {
-		value := general_utils.Container[fieldName].(float64)
+		value := generalutils.Container[fieldName].(float64)
 		mp.Value = &value
 	}
 
@@ -97,17 +97,17 @@ func RepositoryRetrieve(mp general_utils.Metrics) (general_utils.Metrics, error)
 
 }
 
-func RepositoryRetrieveString(mp general_utils.Metrics) (string, error) {
+func RepositoryRetrieveString(mp generalutils.Metrics) (string, error) {
 
 	v := reflect.ValueOf(mp)
 	var requestedValue string
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
-		err = errors.New("Failed metrics retrieval")
+		err = errors.New("failed metrics retrieval")
 		log.Fatalf("Error happened in validating metrics type. Err: %s", err)
 		return requestedValue, err
 	}
-	requestedValue = fmt.Sprintf("%v", general_utils.Container[fieldName])
+	requestedValue = fmt.Sprintf("%v", generalutils.Container[fieldName])
 
 	return requestedValue, nil
 
@@ -122,7 +122,7 @@ func StaticFileSave(storeFile string) {
 	}
 	writer := bufio.NewWriter(file)
 
-	data, err := json.Marshal(&general_utils.Container)
+	data, err := json.Marshal(&generalutils.Container)
 	if err != nil {
 		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 		return
@@ -161,7 +161,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 				log.Fatalf("Error happened in reading JSON file bytes. Err: %s", err)
 				return
 			} else {
-				err = json.Unmarshal([]byte(data), &general_utils.Container)
+				err = json.Unmarshal([]byte(data), &generalutils.Container)
 				log.Print(string(data))
 				if err != nil {
 					log.Printf("No JSON data to decode")

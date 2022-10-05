@@ -1,4 +1,4 @@
-package general_utils
+package generalutils
 
 import (
 	"io"

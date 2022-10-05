@@ -5,7 +5,7 @@ import (
 	"errors"
 	"flag"
 	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
@@ -25,12 +25,12 @@ var storeInterval string
 
 func init() {
 
-	general_utils.Container = make(map[string]interface{})
+	generalutils.Container = make(map[string]interface{})
 
-	host = general_utils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	storeInterval = strings.Replace(*general_utils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
-	storeFile = general_utils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
-	restore = general_utils.GetEnv("RESTORE", flag.String("r", "false", "RESTORE"))
+	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
+	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
+	restore = generalutils.GetEnv("RESTORE", flag.String("r", "false", "RESTORE"))
 
 }
 

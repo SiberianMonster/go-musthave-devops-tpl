@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/general_utils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,7 +21,7 @@ var pollCounterEnv, reportCounterEnv string
 
 func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 
-	var m general_utils.MetricsContainer
+	var m generalutils.MetricsContainer
 	var rtm runtime.MemStats
 	var v reflect.Value
 	var typeOfS reflect.Type
@@ -45,7 +45,7 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 		case <-pollTicker.C:
 			// update stats
 			runtime.ReadMemStats(&rtm)
-			m = general_utils.MetricsUpdate(m, rtm)
+			m = generalutils.MetricsUpdate(m, rtm)
 			v = reflect.ValueOf(m)
 			typeOfS = v.Type()
 		case <-reportTicker.C:
@@ -59,7 +59,7 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 				}
 				url.Path += "update/"
 
-				var metrics general_utils.Metrics
+				var metrics generalutils.Metrics
 
 				if v.Field(i).Kind() == reflect.Float64 {
 					metrics.ID = typeOfS.Field(i).Name
@@ -111,9 +111,9 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 
 func init() {
 
-	host = general_utils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	pollCounterEnv = strings.Replace(*general_utils.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
-	reportCounterEnv = strings.Replace(*general_utils.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
+	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	pollCounterEnv = strings.Replace(*generalutils.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
+	reportCounterEnv = strings.Replace(*generalutils.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
 
 }
 
