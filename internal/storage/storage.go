@@ -37,7 +37,7 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 				valOld, ok := generalutils.Container[fieldName].(float64)
 				if !ok {
 					err = errors.New("failed metrics retrieval")
-					log.Fatalf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
+					log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
 					return err
 				}
 				oldDelta = int64(valOld)
@@ -45,7 +45,7 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 				oldDelta, ok = generalutils.Container[fieldName].(int64)
 				if !ok {
 					err = errors.New("failed metrics retrieval")
-					log.Fatalf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
+					log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
 					return err
 				}
 			}
@@ -104,7 +104,7 @@ func RepositoryRetrieveString(mp generalutils.Metrics) (string, error) {
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
 		err = errors.New("failed metrics retrieval")
-		log.Fatalf("Error happened in validating metrics type. Err: %s", err)
+		log.Printf("Error happened in validating metrics type. Err: %s", err)
 		return requestedValue, err
 	}
 	requestedValue = fmt.Sprintf("%v", generalutils.Container[fieldName])
@@ -158,7 +158,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 			reader := bufio.NewReader(file)
 			data, err := reader.ReadBytes('\n')
 			if err != nil {
-				log.Fatalf("Error happened in reading JSON file bytes. Err: %s", err)
+				log.Printf("Error happened in reading JSON file bytes. Err: %s", err)
 				return
 			} else {
 				err = json.Unmarshal([]byte(data), &generalutils.Container)
