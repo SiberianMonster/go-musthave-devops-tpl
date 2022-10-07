@@ -63,13 +63,13 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 
 				if v.Field(i).Kind() == reflect.Float64 {
 					metrics.ID = typeOfS.Field(i).Name
-					metrics.MType = "gauge"
+					metrics.MType = generalutils.Gauge
 					value := v.Field(i).Interface().(float64)
 					metrics.Value = &value
 
 				} else {
 					metrics.ID = typeOfS.Field(i).Name
-					metrics.MType = "counter"
+					metrics.MType = generalutils.Counter
 					delta := v.Field(i).Interface().(int64)
 					metrics.Delta = &delta
 				}
