@@ -9,6 +9,8 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"fmt"
+	"database/sql"
+	_ "github.com/lib/pq"
 )
 
 var err error
@@ -17,6 +19,7 @@ var testHash string
 
 type WrapperJSONStruct struct {
     Hashkey string
+	DB *sql.DB
 }
 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
@@ -232,6 +235,7 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams)
 	if len(ws.Hashkey) > 0 {
 		if retrievedMetrics.MType == generalutils.Counter {
+			log.Println("Retrieving hash value")
 			retrievedMetrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:counter:%d", retrievedMetrics.ID, *retrievedMetrics.Delta), ws.Hashkey)
 			if err != nil {
 				log.Fatalf("Error happened when hashing received value. Err: %s", err)
@@ -239,6 +243,7 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 			}
 		} else {
 			retrievedMetrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:gauge:%f", retrievedMetrics.ID, *retrievedMetrics.Value), ws.Hashkey)
+			log.Println("Retrieving hash value")
 			if err != nil {
 				log.Fatalf("Error happened when hashing received value. Err: %s", err)
 				return
@@ -330,5 +335,33 @@ func (ws WrapperJSONStruct) GenericHandler(rw http.ResponseWriter, r *http.Reque
 	log.Print(string(s))
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(string(s)))
+}
+
+func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Request) {
+
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "application/json")
+	
+	pingErr := ws.DB.Ping()
+    if pingErr != nil {
+        rw.WriteHeader(http.StatusInternalServerError)
+		resp["status"] = "failed connection to the database"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			return
+		}
+		rw.Write(jsonResp)
+		return
+    }
+
+	rw.WriteHeader(http.StatusOK)
+	resp["status"] = "ok"
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		return
+	}
+	rw.Write(jsonResp)
 }
 
