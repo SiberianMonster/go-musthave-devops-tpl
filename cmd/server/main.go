@@ -31,7 +31,7 @@ func init() {
 	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
-	key = *generalutils.GetEnv("KEY", flag.String("k","12345", "KEY"))
+	key = *generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
 
 }
 

@@ -127,7 +127,7 @@ func init() {
 	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
 	pollCounterEnv = strings.Replace(*generalutils.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
 	reportCounterEnv = strings.Replace(*generalutils.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
-	key = *generalutils.GetEnv("KEY", flag.String("k","12345", "KEY"))
+	key = *generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
 }
 
 func main() {
