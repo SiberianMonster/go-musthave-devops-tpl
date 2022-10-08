@@ -21,7 +21,7 @@ import (
 
 var err error
 var host, storeFile, restore *string
-var storeInterval string
+var storeInterval, key string
 
 func init() {
 
@@ -31,6 +31,7 @@ func init() {
 	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
+	key = *generalutils.GetEnv("KEY", flag.String("k","12345", "KEY"))
 
 }
 
@@ -53,13 +54,14 @@ func main() {
 	go storage.StaticFileUpdate(storeInt, *storeFile)
 
 	r := mux.NewRouter()
+	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: key}
 
-	r.HandleFunc("/update/", handlers.UpdateJSONHandler)
-	r.HandleFunc("/value/", handlers.ValueJSONHandler)
-	r.HandleFunc("/update/{type}/{name}/{value}", handlers.UpdateStringHandler)
-	r.HandleFunc("/value/{type}/{name}", handlers.ValueStringHandler)
+	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
+	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
+	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
+	r.HandleFunc("/value/{type}/{name}", handlersWithKey.ValueStringHandler)
 
-	r.HandleFunc("/", handlers.GenericHandler)
+	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
 
 	srv := &http.Server{

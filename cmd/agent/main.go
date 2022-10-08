@@ -14,10 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 )
 
 var host *string
-var pollCounterEnv, reportCounterEnv string
+var pollCounterEnv, reportCounterEnv, key string
 
 func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 
@@ -66,12 +67,24 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 					metrics.MType = generalutils.Gauge
 					value := v.Field(i).Interface().(float64)
 					metrics.Value = &value
+					if len(key) > 0 {metrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:gauge:%f", metrics.ID, value), key)
+					if err != nil {
+						log.Fatalf("Error happened when hashing. Err: %s", err)
+						return err
+						}
+					}
 
 				} else {
 					metrics.ID = typeOfS.Field(i).Name
 					metrics.MType = generalutils.Counter
 					delta := v.Field(i).Interface().(int64)
 					metrics.Delta = &delta
+					if len(key) > 0 {metrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:counter:%d", metrics.ID, delta), key)
+					if err != nil {
+						log.Fatalf("Error happened when hashing. Err: %s", err)
+						return err
+						}
+					}
 				}
 
 				body, err := json.Marshal(metrics)
@@ -114,7 +127,7 @@ func init() {
 	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
 	pollCounterEnv = strings.Replace(*generalutils.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
 	reportCounterEnv = strings.Replace(*generalutils.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
-
+	key = *generalutils.GetEnv("KEY", flag.String("k","12345", "KEY"))
 }
 
 func main() {

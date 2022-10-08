@@ -6,6 +6,9 @@ import (
 	"os"
 	"math/rand"
 	"runtime"
+	"crypto/sha256"
+	"crypto/hmac"
+	"encoding/hex"
 )
 
 var Container map[string]interface{}
@@ -20,6 +23,7 @@ type Metrics struct {
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
 type GzipWriter struct {
@@ -106,3 +110,13 @@ func (w GzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+func getBinaryBySHA256(s string) []byte {
+    r := sha256.Sum256([]byte(s))
+    return r[:]
+}
+
+func Hash(value, key string) (string, error) {
+    mac := hmac.New(sha256.New, getBinaryBySHA256(key))
+    _, err := mac.Write([]byte(value))
+    return hex.EncodeToString(mac.Sum(nil)), err
+}

@@ -8,12 +8,18 @@ import (
 	"strconv"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"fmt"
 )
 
 var err error
 var resp map[string]string
+var testHash string
 
-func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
+type WrapperJSONStruct struct {
+    Hashkey string
+}
+
+func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
@@ -48,6 +54,38 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(ws.Hashkey) > 0 {
+		if updateParams.MType == generalutils.Counter {
+			log.Printf(strconv.Itoa(int(*updateParams.Delta)))
+			testHash, err = generalutils.Hash(fmt.Sprintf("%s:counter:%d", updateParams.ID, *updateParams.Delta), ws.Hashkey)
+			if err != nil {
+				log.Fatalf("Error happened when hashing received value. Err: %s", err)
+				return
+			}
+		} else {
+			log.Printf(strconv.Itoa(int(*updateParams.Value)))
+			log.Printf(updateParams.MType)
+			testHash, err = generalutils.Hash(fmt.Sprintf("%s:gauge:%f", updateParams.ID, *updateParams.Value), ws.Hashkey)
+			if err != nil {
+				log.Fatalf("Error happened when hashing received value. Err: %s", err)
+				return
+			}
+		}
+		
+		if testHash != updateParams.Hash {
+			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
+			rw.WriteHeader(http.StatusBadRequest)
+			resp["status"] = "received hash does not match"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+				return
+			}
+			rw.Write(jsonResp)
+			return
+		}
+	}
+
 	err = storage.RepositoryUpdate(updateParams)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
@@ -77,7 +115,7 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 }
 
-func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
+func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
@@ -141,7 +179,7 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 }
 
-func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
+func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
@@ -195,6 +233,21 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams)
+	if len(ws.Hashkey) > 0 {
+		if retrievedMetrics.MType == generalutils.Counter {
+			retrievedMetrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:counter:%d", retrievedMetrics.ID, *retrievedMetrics.Delta), ws.Hashkey)
+			if err != nil {
+				log.Fatalf("Error happened when hashing received value. Err: %s", err)
+				return
+			}
+		} else {
+			retrievedMetrics.Hash, err = generalutils.Hash(fmt.Sprintf("%s:gauge:%f", retrievedMetrics.ID, *retrievedMetrics.Value), ws.Hashkey)
+			if err != nil {
+				log.Fatalf("Error happened when hashing received value. Err: %s", err)
+				return
+			}
+		}
+	}
 	log.Println(retrievedMetrics)
 	if getErr != nil {
 		rw.WriteHeader(http.StatusNotFound)
@@ -212,7 +265,7 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(retrievedMetrics)
 }
 
-func ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
+func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 
@@ -269,7 +322,7 @@ func ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 }
 
-func GenericHandler(rw http.ResponseWriter, r *http.Request) {
+func (ws WrapperJSONStruct) GenericHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	log.Printf("Got to generic endpoint")
 	s, err := json.Marshal(generalutils.Container)
