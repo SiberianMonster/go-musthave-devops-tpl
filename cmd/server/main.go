@@ -20,19 +20,19 @@ import (
 )
 
 var err error
-var host, storeFile, restore *string
-var storeInterval, key string
+var host, storeFile, restore, key *string
+var storeInterval string
 
 func init() {
 
 	generalutils.Container = make(map[string]interface{})
 
 	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	key = generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
 	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
 	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
-	key = *generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
-
+	
 }
 
 func main() {
@@ -54,7 +54,7 @@ func main() {
 	go storage.StaticFileUpdate(storeInt, *storeFile)
 
 	r := mux.NewRouter()
-	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: key}
+	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
