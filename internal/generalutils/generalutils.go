@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"crypto/sha256"
 	"crypto/hmac"
+	"fmt"
 )
 
 var Container map[string]interface{}
@@ -117,5 +118,5 @@ func (w GzipWriter) Write(b []byte) (int, error) {
 func Hash(value, key string) (string, error) {
     mac := hmac.New(sha256.New, []byte(key))
     _, err := mac.Write([]byte(value))
-    return fmt.Sprintf("%x", h.Sum(nil))
+    return fmt.Sprintf("%x", mac.Sum(nil)), err
 }
