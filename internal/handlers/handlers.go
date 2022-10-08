@@ -56,15 +56,12 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 
 	if len(ws.Hashkey) > 0 {
 		if updateParams.MType == generalutils.Counter {
-			log.Printf(strconv.Itoa(int(*updateParams.Delta)))
 			testHash, err = generalutils.Hash(fmt.Sprintf("%s:counter:%d", updateParams.ID, *updateParams.Delta), ws.Hashkey)
 			if err != nil {
 				log.Fatalf("Error happened when hashing received value. Err: %s", err)
 				return
 			}
 		} else {
-			log.Printf(strconv.Itoa(int(*updateParams.Value)))
-			log.Printf(updateParams.MType)
 			testHash, err = generalutils.Hash(fmt.Sprintf("%s:gauge:%f", updateParams.ID, *updateParams.Value), ws.Hashkey)
 			if err != nil {
 				log.Fatalf("Error happened when hashing received value. Err: %s", err)

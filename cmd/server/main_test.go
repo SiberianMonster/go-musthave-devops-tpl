@@ -37,12 +37,14 @@ func TestRouter(t *testing.T) {
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/update/", handlers.UpdateJSONHandler)
-	r.HandleFunc("/value/", handlers.ValueJSONHandler)
-	r.HandleFunc("/update/{type}/{name}/{value}", handlers.UpdateStringHandler)
-	r.HandleFunc("/value/{type}/{name}", handlers.ValueStringHandler)
+	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: ""}
 
-	r.HandleFunc("/", handlers.GenericHandler)
+	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
+	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
+	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
+	r.HandleFunc("/value/{type}/{name}", handlersWithKey.ValueStringHandler)
+
+	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
 
 	ts := httptest.NewServer(r)
