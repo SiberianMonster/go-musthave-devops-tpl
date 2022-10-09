@@ -180,9 +180,11 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 
 	_, err := storeDB.ExecContext(ctx,
 		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)"
+	)
 	if err != nil {
 		log.Fatalf("Error happened when creating sql table. Err: %s", err)
 		return
+	}
 	for fieldName := range generalutils.Container { 
 
 		if _, ok := generalutils.Container[fieldName].(float64); ok {
@@ -195,6 +197,7 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 			if err != nil {
 				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
 				return
+			}
 		} else {
 			delta = generalutils.Container[fieldName].(int64)
 			_, err := storeDB.ExecContext(ctx,
@@ -205,8 +208,9 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 			if err != nil {
 				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
 				return
-		}
+			}
 
+		}
 	}
 	log.Printf("saved container data to DB")
 }
