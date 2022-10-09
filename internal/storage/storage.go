@@ -215,6 +215,7 @@ func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 		if err := latestMetrics.Scan(&row.name, &row.delta, &row.value); err != nil {
 			log.Fatalf("Error happened when extracting entries in sql table. Err: %s", err)
 			return
+		}
 		for latestMetrics.Next() {
 			var row sql.Row
 			if err := latestMetrics.Scan(&row.name, &row.delta, &row.value); err != nil {
