@@ -178,12 +178,6 @@ func StaticFileUpload(storeFile string, restore bool) {
 
 func DBSave(storeDB *sql.DB, ctx context.Context) {
 
-	_, err := storeDB.ExecContext(ctx,
-		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)")
-	if err != nil {
-		log.Fatalf("Error happened when creating sql table. Err: %s", err)
-		return
-	}
 	for fieldName := range generalutils.Container { 
 
 		if _, ok := generalutils.Container[fieldName].(float64); ok {
@@ -214,16 +208,16 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 	log.Printf("saved container data to DB")
 }
 
-func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, ctx context.Context) {
+func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, ctx context.Context, connStr string) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
 	for range ticker.C {
-		pingErr := storeDB.Ping()
-		if pingErr != nil {
-			StaticFileSave(storeFile)
-		} else {
+		
+		if len(connStr) > 0 { 
 			DBSave(storeDB, ctx)
+		} else {
+			StaticFileSave(storeFile)
 		}
 	}
 }
