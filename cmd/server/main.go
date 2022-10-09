@@ -65,7 +65,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
 		}
-		_, err := storeDB.ExecContext(ctx,
+		_, err := db.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)")
 		if err != nil {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
