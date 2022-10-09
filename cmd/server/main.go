@@ -65,6 +65,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
 		}
+		_, err := storeDB.ExecContext(ctx,
+			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)")
+		if err != nil {
+			log.Fatalf("Error happened when creating sql table. Err: %s", err)
+			return
+		}
 		handlersWithKey.DB = db
 	}
 
@@ -89,7 +95,7 @@ func main() {
 		log.Println("Stopped serving new connections.")
 	}()
 
-	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx)
+	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx, *connStr)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
