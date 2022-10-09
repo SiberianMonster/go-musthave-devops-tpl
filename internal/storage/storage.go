@@ -10,6 +10,9 @@ import (
 	"reflect"
 	"time"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"database/sql"
+	_ "github.com/lib/pq"
+	"context"
 )
 
 var err error
@@ -173,12 +176,52 @@ func StaticFileUpload(storeFile string, restore bool) {
 	}
 }
 
-func StaticFileUpdate(storeInt int, storeFile string) {
+func DBSave(storeDB sql.DB, ctx context.Context) {
+
+	_, err := storeDB.ExecContext(ctx,
+		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)"
+	if err != nil {
+		log.Fatalf("Error happened when creating sql table. Err: %s", err)
+		return
+	for fieldName := range generalutils.Container { 
+
+		if _, ok := generalutils.Container[fieldName].(float64); ok {
+			value = generalutils.Container[fieldName].(float64)
+			_, err := storeDB.ExecContext(ctx,
+				"INSERT INTO metrics (name, value) VALUES ($1, $2)",
+				fieldName,
+				value,
+			)
+			if err != nil {
+				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
+				return
+		} else {
+			delta = generalutils.Container[fieldName].(int64)
+			_, err := storeDB.ExecContext(ctx,
+				"INSERT INTO metrics (name, delta) VALUES ($1, $2)",
+				fieldName,
+				delta,
+			)
+			if err != nil {
+				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
+				return
+		}
+
+	}
+	log.Printf("saved container data to DB")
+}
+
+func ContainerUpdate(storeInt int, storeFile string, storeDB sql.DB, ctx context.Context) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
 	for range ticker.C {
-		StaticFileSave(storeFile)
+		pingErr := storeDB.Ping()
+		if pingErr != nil {
+			StaticFileSave(storeFile)
+		} else {
+			DBSave(storeDB, ctx)
+		}
 	}
 }
 

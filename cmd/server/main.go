@@ -24,6 +24,7 @@ import (
 var err error
 var host, storeFile, restore, key, connStr *string
 var storeInterval string
+db *sql.DB
 
 func init() {
 
@@ -54,16 +55,18 @@ func main() {
 
 	storage.StaticFileUpload(*storeFile, restoreValue)
 
-	go storage.StaticFileUpdate(storeInt, *storeFile)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
-	db, err := sql.Open("postgres", *connStr)
-   	if err != nil {
-		log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
-   	}
-	handlersWithKey.DB = db
+	if len(*connStr) > 0 {
+		db, err = sql.Open("postgres", *connStr)
+		if err != nil {
+			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
+		}
+		handlersWithKey.DB = db
+	}
 
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
@@ -86,12 +89,17 @@ func main() {
 		log.Println("Stopped serving new connections.")
 	}()
 
+	go storage.ContainerUpdate(storeInt, *storeFile, *db, ctx)
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
 	defer shutdownRelease()
+	defer db.Close()
+	// не забываем освободить ресурс
+	defer cancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("HTTP shutdown error: %v", err)
