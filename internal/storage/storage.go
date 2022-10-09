@@ -179,8 +179,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 func DBSave(storeDB sql.DB, ctx context.Context) {
 
 	_, err := storeDB.ExecContext(ctx,
-		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)"
-	)
+		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)")
 	if err != nil {
 		log.Fatalf("Error happened when creating sql table. Err: %s", err)
 		return
