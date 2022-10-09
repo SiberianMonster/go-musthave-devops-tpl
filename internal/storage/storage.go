@@ -187,7 +187,7 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 	for fieldName := range generalutils.Container { 
 
 		if _, ok := generalutils.Container[fieldName].(float64); ok {
-			value = generalutils.Container[fieldName].(float64)
+			value := generalutils.Container[fieldName].(float64)
 			_, err := storeDB.ExecContext(ctx,
 				"INSERT INTO metrics (name, value) VALUES ($1, $2)",
 				fieldName,
@@ -198,7 +198,7 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 				return
 			}
 		} else {
-			delta = generalutils.Container[fieldName].(int64)
+			delta := generalutils.Container[fieldName].(int64)
 			_, err := storeDB.ExecContext(ctx,
 				"INSERT INTO metrics (name, delta) VALUES ($1, $2)",
 				fieldName,
