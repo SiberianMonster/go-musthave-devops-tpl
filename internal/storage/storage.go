@@ -211,11 +211,7 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 
 	if restore {
-		latestMetrics := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (
-			SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn
-			FROM metrics AS m
-		)
-		SELECT * FROM ranked_messages WHERE rn = 1;")
+		latestMetrics := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT * FROM ranked_messages WHERE rn = 1;")
 
 		for latestMetrics.Next() {
 			var row Row
