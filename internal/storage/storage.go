@@ -211,10 +211,12 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 
 	if restore {
-		latestMetrics := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT * FROM ranked_messages WHERE rn = 1;")
-
+		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT * FROM ranked_messages WHERE rn = 1;")
+		if err := latestMetrics.Scan(&row.name, &row.delta, &row.value); err != nil {
+			log.Fatalf("Error happened when extracting entries in sql table. Err: %s", err)
+			return
 		for latestMetrics.Next() {
-			var row Row
+			var row sql.Row
 			if err := latestMetrics.Scan(&row.name, &row.delta, &row.value); err != nil {
 				log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
 				return
