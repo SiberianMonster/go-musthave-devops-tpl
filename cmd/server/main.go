@@ -89,7 +89,7 @@ func main() {
 		log.Println("Stopped serving new connections.")
 	}()
 
-	go storage.ContainerUpdate(storeInt, *storeFile, *db, ctx)
+	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)

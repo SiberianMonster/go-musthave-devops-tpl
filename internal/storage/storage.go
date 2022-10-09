@@ -176,7 +176,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 	}
 }
 
-func DBSave(storeDB sql.DB, ctx context.Context) {
+func DBSave(storeDB *sql.DB, ctx context.Context) {
 
 	_, err := storeDB.ExecContext(ctx,
 		"CREATE TABLE IF NOT EXISTS metrics (id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, delta int, value float)")
@@ -214,7 +214,7 @@ func DBSave(storeDB sql.DB, ctx context.Context) {
 	log.Printf("saved container data to DB")
 }
 
-func ContainerUpdate(storeInt int, storeFile string, storeDB sql.DB, ctx context.Context) {
+func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, ctx context.Context) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
