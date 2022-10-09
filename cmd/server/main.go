@@ -53,10 +53,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	storage.StaticFileUpload(*storeFile, restoreValue)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
@@ -71,9 +68,12 @@ func main() {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 			return
 		}
+		storage.DBUpload(*storeFile, restoreValue)
 		handlersWithKey.DB = db
+	} else {
+		storage.StaticFileUpload(*storeFile, restoreValue)
 	}
-
+	
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
@@ -111,6 +111,11 @@ func main() {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
-	storage.StaticFileSave(*storeFile)
+	if len(*connStr) > 0 {
+		DBSave(db, ctx)
+	} else {
+		storage.StaticFileSave(*storeFile)
+	}
+	
 
 }

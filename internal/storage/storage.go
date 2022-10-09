@@ -208,6 +208,32 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 	log.Printf("saved container data to DB")
 }
 
+func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
+
+	if restore {
+		latestMetrics := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (
+			SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn
+			FROM metrics AS m
+		)
+		SELECT * FROM ranked_messages WHERE rn = 1;")
+
+		for latestMetrics.Next() {
+			var row Row
+			if err := latestMetrics.Scan(&row.name, &row.delta, &row.value); err != nil {
+				log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
+				return
+			} else {
+				if row.delta != nil {
+					generalutils.Container[row.name] = row.delta
+				} else {
+					generalutils.Container[row.name] = row.value
+				}
+			}
+		}
+		log.Printf("uploaded data from DB")
+	}
+}
+
 func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, ctx context.Context, connStr string) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
