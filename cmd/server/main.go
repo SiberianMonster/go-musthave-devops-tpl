@@ -24,7 +24,7 @@ import (
 var err error
 var host, storeFile, restore, key, connStr *string
 var storeInterval string
-db *sql.DB
+var db *sql.DB
 
 func init() {
 
