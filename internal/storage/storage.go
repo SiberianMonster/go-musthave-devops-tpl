@@ -188,7 +188,7 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 				value,
 			)
 			if err != nil {
-				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
+				log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
 				return
 			}
 		} else {
@@ -199,7 +199,7 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 				delta,
 			)
 			if err != nil {
-				log.Fatalf("Error happened when inserting a new entry into sql table. Err: %s", err)
+				log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
 				return
 			}
 

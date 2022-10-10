@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
