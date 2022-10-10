@@ -213,6 +213,42 @@ func DBSave(storeDB *sql.DB) {
 	log.Printf("saved container data to DB")
 }
 
+func DBSaveBatch(storeDB *sql.DB, metrics []generalutils.Metrics) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// не забываем освободить ресурс
+	defer cancel()
+
+	// шаг 1 — объявляем транзакцию
+	tx, err := storeDB.Begin()
+	if err != nil {
+		log.Printf("Error happened when initiating sql transaction. Err: %s", err)
+		return err
+	}
+	// шаг 1.1 — если возникает ошибка, откатываем изменения
+	defer tx.Rollback()
+	
+	// шаг 2 — готовим инструкцию
+	stmt, err := tx.PrepareContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3)")
+	if err != nil {
+		log.Printf("Error happened when preparing sql transaction context. Err: %s", err)
+		return err
+	}
+	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
+	defer stmt.Close()
+	
+	for _, v := range metrics {
+	// шаг 3 — указываем, что каждое будет добавлено в транзакцию
+		if _, err = stmt.ExecContext(ctx, v.ID, v.Value, v.Delta); err != nil {
+			log.Printf("Error happened when declaring transaction. Err: %s", err)
+			return err
+		}
+	}
+	// шаг 4 — сохраняем изменения
+	
+	return tx.Commit()
+} 
+
 func DBUpload(storeDB *sql.DB, restore bool) {
 
 	if restore {
@@ -266,4 +302,5 @@ func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr st
 		}
 	}
 }
+
 

@@ -183,6 +183,58 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 
 }
 
+func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *http.Request) {
+
+	resp = make(map[string]string)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Set("Connection", "close")
+	metricsBatch := []generalutils.Metrics{}
+
+	err := json.NewDecoder(r.Body).Decode(&metricsBatch)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		resp["status"] = "error when decoding batch"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			return
+		}
+		rw.Write(jsonResp)
+		return
+	}
+
+	defer r.Body.Close()
+
+	err = storage.DBSaveBatch(ws.DB, metricsBatch)
+	if err != nil {
+		rw.WriteHeader(http.StatusNotImplemented)
+		resp["status"] = "batch update failed"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			return
+		}
+		rw.Write(jsonResp)
+		return
+	}
+	s, err := json.Marshal(generalutils.Container)
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		return
+	}
+	log.Print(string(s))
+	rw.WriteHeader(http.StatusOK)
+	resp["status"] = "ok"
+	jsonResp, err := json.Marshal(resp)
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		return
+	}
+	rw.Write(jsonResp)
+
+}
+
 func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)

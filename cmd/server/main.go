@@ -87,6 +87,7 @@ func main() {
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
 	r.HandleFunc("/value/{type}/{name}", handlersWithKey.ValueStringHandler)
 	r.HandleFunc("/ping", handlersWithKey.PostgresHandler)
+	r.HandleFunc("/updates/", handlersWithKey.UpdateBatchJSONHandler)
 
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
