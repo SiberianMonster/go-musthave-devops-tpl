@@ -73,12 +73,12 @@ func main() {
 		}
 		storage.DBUpload(db, restoreValue)
 		handlersWithKey.DB = db
+		defer db.Close()
 		
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)
 	}
-	defer db.Close()
-
+	
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
@@ -108,16 +108,16 @@ func main() {
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
 	defer shutdownRelease()
 
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	log.Println("Graceful shutdown complete.")
+
 	if len(*connStr) > 0 {
 		storage.DBSave(db)
 	} else {
 		storage.StaticFileSave(*storeFile)
 	}
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
-	log.Println("Graceful shutdown complete.")
 	
 
 }
