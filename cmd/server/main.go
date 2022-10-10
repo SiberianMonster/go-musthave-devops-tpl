@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
 	r := mux.NewRouter()
@@ -72,12 +72,12 @@ func main() {
 		}
 		storage.DBUpload(db, ctx, restoreValue)
 		handlersWithKey.DB = db
-		defer db.Close()
 		
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)
 	}
-	
+	defer db.Close()
+
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
@@ -92,14 +92,13 @@ func main() {
 		Addr:    *host,
 	}
 
+	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx, *connStr)
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP server error: %v", err)
 		}
 		log.Println("Stopped serving new connections.")
 	}()
-
-	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx, *connStr)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
