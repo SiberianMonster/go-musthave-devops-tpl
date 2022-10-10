@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	_ "github.com/lib/pq"
 	"context"
+	"strings"
 )
 
 var err error
@@ -246,9 +247,14 @@ func DBUpload(storeDB *sql.DB, restore bool) {
 	}
 }
 
-func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string) {
+func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string, storeParameter string) {
 
-	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
+	if strings.Contains(storeParameter, "m") {
+		ticker := time.NewTicker(time.Duration(storeInt) * 100 * time.Millisecond)
+	} else {
+		ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
+	}
+	
 
 	for range ticker.C {
 		

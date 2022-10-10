@@ -22,7 +22,7 @@ import (
 )
 
 var err error
-var host, storeFile, restore, key, connStr *string
+var host, storeFile, restore, key, connStr, storeParameter *string
 var storeInterval string
 var db *sql.DB
 
@@ -32,7 +32,7 @@ func init() {
 
 	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
 	key = generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
-	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
+	storeParameter = generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
 	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 	connStr = generalutils.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
@@ -48,6 +48,7 @@ func main() {
 		log.Fatalf("Error happened in reading restoreValue variable. Err: %s", err)
 	}
 
+	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
 	storeInt, err := strconv.Atoi(storeInterval)
 	if err != nil {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
@@ -93,7 +94,7 @@ func main() {
 		Addr:    *host,
 	}
 
-	go storage.ContainerUpdate(storeInt, *storeFile, db,  *connStr)
+	go storage.ContainerUpdate(storeInt, *storeFile, db,  *connStr, *storeParameter)
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP server error: %v", err)
