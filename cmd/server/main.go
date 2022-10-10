@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
 
@@ -71,7 +71,7 @@ func main() {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 			return
 		}
-		storage.DBUpload(db, ctx, restoreValue)
+		storage.DBUpload(db, restoreValue)
 		handlersWithKey.DB = db
 		
 	} else {
@@ -93,7 +93,7 @@ func main() {
 		Addr:    *host,
 	}
 
-	go storage.ContainerUpdate(storeInt, *storeFile, db, ctx, *connStr)
+	go storage.ContainerUpdate(storeInt, *storeFile, db,  *connStr)
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP server error: %v", err)
@@ -105,11 +105,11 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
 	defer shutdownRelease()
 
 	if len(*connStr) > 0 {
-		storage.DBSave(db, ctx)
+		storage.DBSave(db)
 	} else {
 		storage.StaticFileSave(*storeFile)
 	}

@@ -178,6 +178,10 @@ func StaticFileUpload(storeFile string, restore bool) {
 
 func DBSave(storeDB *sql.DB, ctx context.Context) {
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
+
 	for fieldName := range generalutils.Container { 
 
 		if _, ok := generalutils.Container[fieldName].(float64); ok {
@@ -208,9 +212,13 @@ func DBSave(storeDB *sql.DB, ctx context.Context) {
 	log.Printf("saved container data to DB")
 }
 
-func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
+func DBUpload(storeDB *sql.DB, restore bool) {
 
 	if restore {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
+
 		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT * FROM ranked_metrics WHERE rn = 1;")
 		if err != nil {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
@@ -238,14 +246,14 @@ func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 	}
 }
 
-func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, ctx context.Context, connStr string) {
+func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string) {
 
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
 	for range ticker.C {
 		
 		if len(connStr) > 0 { 
-			DBSave(storeDB, ctx)
+			DBSave(storeDB)
 		} else {
 			StaticFileSave(storeFile)
 		}
