@@ -176,7 +176,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 	}
 }
 
-func DBSave(storeDB *sql.DB, ctx context.Context) {
+func DBSave(storeDB *sql.DB) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		// не забываем освободить ресурс
