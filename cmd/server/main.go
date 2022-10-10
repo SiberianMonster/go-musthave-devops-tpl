@@ -73,11 +73,13 @@ func main() {
 		}
 		storage.DBUpload(db, restoreValue)
 		handlersWithKey.DB = db
+		handlersWithKey.DBFlag = true
 		defer db.Close()
 		
 		
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)
+		handlersWithKey.DBFlag = false
 	}
 	
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)

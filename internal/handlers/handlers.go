@@ -20,6 +20,7 @@ var testHash string
 type WrapperJSONStruct struct {
     Hashkey string
 	DB *sql.DB
+	DBFlag bool
 }
 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
@@ -97,6 +98,9 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		}
 		rw.Write(jsonResp)
 		return
+	}
+	if ws.DBFlag {
+		storage.DBSave(ws.DB)
 	}
 	s, err := json.Marshal(generalutils.Container)
 	if err != nil {
