@@ -65,7 +65,7 @@ func main() {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
 		}
 		_, err := db.ExecContext(ctx,
-			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(255) NOT NULL, delta bigint, value float)")
+			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value float)")
 		if err != nil {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 			return
