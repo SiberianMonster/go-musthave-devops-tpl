@@ -256,7 +256,7 @@ func DBUpload(storeDB *sql.DB, restore bool) {
 		// не забываем освободить ресурс
 		defer cancel()
 
-		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT name, delta, value FROM ranked_metrics WHERE rn = 1;")
+		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT name, sum(delta), value FROM ranked_metrics WHERE rn = 1;")
 		if err != nil {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
 			return
