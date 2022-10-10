@@ -53,7 +53,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
 
@@ -105,7 +105,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 20*time.Second)
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownRelease()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
