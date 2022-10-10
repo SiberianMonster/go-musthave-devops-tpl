@@ -217,7 +217,7 @@ func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 			return
 		}
 
-		ddefer func() {
+		defer func() {
 			_ = latestMetrics.Close()
 			_ = latestMetrics.Err() 
 		}()
