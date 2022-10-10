@@ -68,7 +68,7 @@ func main() {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 			return
 		}
-		storage.DBUpload(*storeFile, restoreValue)
+		storage.DBUpload(*storeFile, ctx, restoreValue)
 		handlersWithKey.DB = db
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)

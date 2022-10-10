@@ -216,6 +216,11 @@ func DBUpload(storeDB *sql.DB, ctx context.Context, restore bool) {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
 			return
 		}
+
+		ddefer func() {
+			_ = latestMetrics.Close()
+			_ = latestMetrics.Err() 
+		}()
 		for latestMetrics.Next() {
 			var row generalutils.Metrics
 			if err := latestMetrics.Scan(&row.ID, &row.Delta, &row.Value); err != nil {
