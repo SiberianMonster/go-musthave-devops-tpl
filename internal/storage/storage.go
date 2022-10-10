@@ -17,7 +17,7 @@ import (
 
 var err error
 
-func RepositoryUpdate(mp generalutils.Metrics) error {
+func RepositoryUpdate(mp generalutils.Metrics, storeDB *sql.DB) error {
 
 	smp, err := json.Marshal(mp)
 	if err != nil {
@@ -60,6 +60,7 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 		log.Printf("New gauge %f\n", newValue)
 		generalutils.Container[fieldName] = newValue
 	}
+	DBSave(storeDB)
 
 	return nil
 

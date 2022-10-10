@@ -86,7 +86,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		}
 	}
 
-	err = storage.RepositoryUpdate(updateParams)
+	err = storage.RepositoryUpdate(updateParams, ws.DB)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
