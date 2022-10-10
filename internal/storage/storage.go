@@ -249,7 +249,7 @@ func DBUpload(storeDB *sql.DB, restore bool) {
 
 func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string, storeParameter string) {
 
-	var ticker time.Ticker
+	var ticker *time.Ticker
 	if strings.Contains(storeParameter, "m") {
 		ticker = time.NewTicker(time.Duration(storeInt) * 100 * time.Millisecond)
 	} else {
