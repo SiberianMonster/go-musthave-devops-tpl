@@ -112,7 +112,7 @@ func main() {
 	}
 	log.Println("Graceful shutdown complete.")
 	if len(*connStr) > 0 {
-		DBSave(db, ctx)
+		storage.DBSave(db, ctx)
 	} else {
 		storage.StaticFileSave(*storeFile)
 	}
