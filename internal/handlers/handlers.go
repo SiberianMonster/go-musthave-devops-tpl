@@ -156,7 +156,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 		structParams = generalutils.Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
 	}
 
-	err = storage.RepositoryUpdate(updateParams, ws.DB)
+	err = storage.RepositoryUpdate(structParams, ws.DB)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
