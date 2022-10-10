@@ -54,6 +54,8 @@ func main() {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
@@ -70,6 +72,8 @@ func main() {
 		}
 		storage.DBUpload(db, ctx, restoreValue)
 		handlersWithKey.DB = db
+		defer db.Close()
+		
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)
 	}
@@ -103,19 +107,17 @@ func main() {
 
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
 	defer shutdownRelease()
-	defer db.Close()
-	// не забываем освободить ресурс
-	defer cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
-	log.Println("Graceful shutdown complete.")
 	if len(*connStr) > 0 {
 		storage.DBSave(db, ctx)
 	} else {
 		storage.StaticFileSave(*storeFile)
 	}
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	log.Println("Graceful shutdown complete.")
 	
 
 }
