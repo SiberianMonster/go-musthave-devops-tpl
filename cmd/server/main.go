@@ -53,9 +53,10 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
+
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
@@ -104,7 +105,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownRelease()
 
 	if len(*connStr) > 0 {
