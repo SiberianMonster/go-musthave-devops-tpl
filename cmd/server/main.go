@@ -5,10 +5,10 @@ import (
 	"errors"
 	"flag"
 	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/SiberianMonstergo-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonstergo-musthave-devops-tpl/internal/handlers"
+	"github.com/SiberianMonstergo-musthave-devops-tpl/internal/middleware"
+	"github.com/SiberianMonstergo-musthave-devops-tpl/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -53,14 +53,13 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
-
 	r := mux.NewRouter()
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
 	if len(*connStr) > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
 		db, err = sql.Open("postgres", *connStr)
 		if err != nil {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
@@ -74,6 +73,7 @@ func main() {
 		storage.DBUpload(db, restoreValue)
 		handlersWithKey.DB = db
 		defer db.Close()
+		
 		
 	} else {
 		storage.StaticFileUpload(*storeFile, restoreValue)
@@ -118,6 +118,5 @@ func main() {
 	} else {
 		storage.StaticFileSave(*storeFile)
 	}
-	
 
 }
