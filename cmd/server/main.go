@@ -5,7 +5,8 @@ import (
 	"errors"
 	"flag"
 	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
@@ -28,14 +29,14 @@ var db *sql.DB
 
 func init() {
 
-	generalutils.Container = make(map[string]interface{})
+	metrics.Container = make(map[string]interface{})
 
-	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	key = generalutils.GetEnv("KEY", flag.String("k","", "KEY"))
-	storeParameter = generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
-	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
-	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
-	connStr = generalutils.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
+	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	key = config.GetEnv("KEY", flag.String("k","", "KEY"))
+	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
+	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
+	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
+	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
 	
 }
 
@@ -69,16 +70,20 @@ func main() {
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value float)")
 		if err != nil {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
-			return
+
 		}
-		storage.DBUpload(db, restoreValue)
+		if restoreValue {
+			storage.DBUpload(db)
+		}
 		handlersWithKey.DB = db
 		handlersWithKey.DBFlag = true
 		defer db.Close()
 		
 		
 	} else {
-		storage.StaticFileUpload(*storeFile, restoreValue)
+		if len(*storeFile) > 0 && restoreValue {
+			storage.StaticFileUpload(*storeFile)
+		}
 		handlersWithKey.DBFlag = false
 	}
 	
@@ -120,7 +125,9 @@ func main() {
 	if len(*connStr) > 0 {
 		storage.DBSave(db)
 	} else {
-		storage.StaticFileSave(*storeFile)
+		if len(*storeFile) > 0 {
+			storage.StaticFileSave(*storeFile)
+		}
 	}
 
 }
