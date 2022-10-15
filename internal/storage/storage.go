@@ -274,6 +274,7 @@ func DBUpload(storeDB *sql.DB) {
 					}()
 				}
 			}
+		}
 		log.Printf("uploaded data from DB")
 }
 
