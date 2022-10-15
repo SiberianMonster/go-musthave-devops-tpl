@@ -255,9 +255,6 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 	}
 
 	defer r.Body.Close()
-	if ws.DBFlag {
-		storage.DBUpload(ws.DB)
-	}
 
 	if _, ok := metrics.Container[receivedParams.ID]; !ok {
 		log.Printf("missing params value")

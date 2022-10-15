@@ -59,6 +59,7 @@ func main() {
 	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
 
 	if len(*connStr) > 0 {
+		log.Println("Start db connection.")
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()

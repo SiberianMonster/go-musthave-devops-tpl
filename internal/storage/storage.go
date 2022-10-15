@@ -248,6 +248,8 @@ func DBUpload(storeDB *sql.DB) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
+		var uploadedValue float64
+		var uploadedDelta int64
 
 		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT name, delta, value FROM ranked_metrics WHERE rn = 1;")
 		if err != nil {
@@ -264,14 +266,25 @@ func DBUpload(storeDB *sql.DB) {
 				log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
 			} else {
 				if row.Delta != nil {
-					err := storeDB.QueryRowContext(ctx, "SELECT  SUM(delta) FROM metrics GROUP BY name;").Scan(&row.Delta)
+					err := storeDB.QueryRowContext(ctx, "SELECT  SUM(delta) FROM metrics WHERE name=$1;", row.ID).Scan(&row.Delta)
 					if err != nil {
 						log.Fatalf("Error happened when extracting delta entry from sql table. Err: %s", err)
 					}
+					uploadedDelta = *row.Delta
+					metrics.Container[row.ID] = uploadedDelta
+				} else {
+					uploadedValue = *row.Value
+					metrics.Container[row.ID] = uploadedValue
 				}
 			}
 		}
 		log.Printf("uploaded data from DB")
+		s, err := json.Marshal(metrics.Container)
+		if err != nil {
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			return
+		}
+		log.Print(string(s))
 }
 
 func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string, storeParameter string) {
