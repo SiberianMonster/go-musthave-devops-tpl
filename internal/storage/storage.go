@@ -264,24 +264,16 @@ func DBUpload(storeDB *sql.DB) {
 				log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
 			} else {
 				if row.Delta != nil {
-					counterMetrics, err := storeDB.QueryContext(ctx, "SELECT  SUM(delta) FROM metrics GROUP BY name;")
+					counterMetrics, err := storeDB.QueryRowContext(ctx, "SELECT  SUM(delta) FROM metrics GROUP BY name;").Scan(&row.Delta)
 					if err != nil {
-						log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+						log.Fatalf("Error happened when extracting delta entry from sql table. Err: %s", err)
 					}
-			
 					defer func() {
 						_ = counterMetrics.Close()
 						_ = counterMetrics.Err() 
 					}()
-					if err := counterMetrics.Scan(&row.Delta); err != nil {
-						log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
-						metrics.Container[row.ID] = *row.Delta
-					} else {
-						metrics.Container[row.ID] = *row.Value
-					}
 				}
 			}
-		}
 		log.Printf("uploaded data from DB")
 }
 
