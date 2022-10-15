@@ -1,14 +1,8 @@
-package generalutils
+package metrics
 
 import (
-	"io"
-	"net/http"
-	"os"
 	"math/rand"
 	"runtime"
-	"crypto/sha256"
-	"crypto/hmac"
-	"fmt"
 )
 
 var Container map[string]interface{}
@@ -24,11 +18,6 @@ type Metrics struct {
 	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
 	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
-}
-
-type GzipWriter struct {
-	http.ResponseWriter
-	Writer io.Writer
 }
 
 type MetricsContainer struct {
@@ -96,27 +85,4 @@ func MetricsUpdate(m MetricsContainer, rtm runtime.MemStats) MetricsContainer {
 	m.RandomValue = rand.Float64()
 	return m
 
-}
-
-func GetEnv(key string, fallback *string) *string {
-	if value, ok := os.LookupEnv(key); ok {
-		return &value
-	}
-	return fallback
-}
-
-func (w GzipWriter) Write(b []byte) (int, error) {
-	// w.Writer будет отвечать за gzip-сжатие, поэтому пишем в него
-	return w.Writer.Write(b)
-}
-
-//func getBinaryBySHA256(s string) []byte {
-//    r := sha256.Sum256([]byte(s))
-//    return r[:]
-//}
-
-func Hash(value, key string) (string, error) {
-    mac := hmac.New(sha256.New, []byte(key))
-    _, err := mac.Write([]byte(value))
-    return fmt.Sprintf("%x", mac.Sum(nil)), err
 }
