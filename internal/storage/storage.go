@@ -18,7 +18,7 @@ import (
 
 var err error
 
-func RepositoryUpdate(mp metrics.Metrics) error {
+func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 
 	smp, err := json.Marshal(mp)
 	if err != nil {
@@ -26,95 +26,119 @@ func RepositoryUpdate(mp metrics.Metrics) error {
 		return err
 	}
 	log.Print(string(smp))
-	v := reflect.ValueOf(mp)
-	var newValue float64
-	var newDelta int64
-	var oldDelta int64
-	fieldName := v.Field(0).Interface().(string)
-	fieldType := v.Field(1).Interface().(string)
 
-	if fieldType == metrics.Counter {
-		newDelta = *mp.Delta
-		log.Printf("New counter %d\n", newDelta)
-		if _, ok := metrics.Container[fieldName]; ok {
-			if _, ok := metrics.Container[fieldName].(float64); ok {
-				valOld, ok := metrics.Container[fieldName].(float64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-				oldDelta = int64(valOld)
-			} else {
-				oldDelta, ok = metrics.Container[fieldName].(int64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-			}
-			newDelta = oldDelta + newDelta
-		}
-		metrics.Container[fieldName] = newDelta
+	if dbFlag {
+		DBSave(storeDB, mp)
 	} else {
-		newValue = *mp.Value
-		log.Printf("New gauge %f\n", newValue)
-		metrics.Container[fieldName] = newValue
+		v := reflect.ValueOf(mp)
+		var newValue float64
+		var newDelta int64
+		var oldDelta int64
+		fieldName := v.Field(0).Interface().(string)
+		fieldType := v.Field(1).Interface().(string)
+
+		if fieldType == metrics.Counter {
+			newDelta = *mp.Delta
+			log.Printf("New counter %d\n", newDelta)
+			if _, ok := metrics.Container[fieldName]; ok {
+				if _, ok := metrics.Container[fieldName].(float64); ok {
+					valOld, ok := metrics.Container[fieldName].(float64)
+					if !ok {
+						err = errors.New("failed metrics retrieval")
+						log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
+						return err
+					}
+					oldDelta = int64(valOld)
+				} else {
+					oldDelta, ok = metrics.Container[fieldName].(int64)
+					if !ok {
+						err = errors.New("failed metrics retrieval")
+						log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
+						return err
+					}
+				}
+				newDelta = oldDelta + newDelta
+			}
+			metrics.Container[fieldName] = newDelta
+		} else {
+			newValue = *mp.Value
+			log.Printf("New gauge %f\n", newValue)
+			metrics.Container[fieldName] = newValue
+		}
 	}
 
 	return nil
 
 }
 
-func RepositoryRetrieve(mp metrics.Metrics) (metrics.Metrics, error) {
+func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (metrics.Metrics, error) {
 
+	if dbFlag {
+		return DBUpload(storeDB, mp)
+
+	} else {
+		v := reflect.ValueOf(mp)
+		var delta int64
+
+		fieldName, ok := v.Field(0).Interface().(string)
+		if !ok {
+			err = errors.New("failed metrics retrieval")
+			log.Printf("Error happened in validating metrics name. Err: %s", err)
+			return mp, err
+		}
+		fieldType, ok := v.Field(1).Interface().(string)
+		if !ok {
+			err = errors.New("failed metrics retrieval")
+			log.Printf("Error happened in validating metrics type. Err: %s", err)
+			return mp, err
+		}
+
+		if fieldType == metrics.Counter {
+			if _, ok := metrics.Container[fieldName].(float64); ok {
+				valOld := metrics.Container[fieldName].(float64)
+				delta = int64(valOld)
+			} else {
+				delta = metrics.Container[fieldName].(int64)
+			}
+			mp.Delta = &delta
+		} else {
+			value := metrics.Container[fieldName].(float64)
+			mp.Value = &value
+		}
+		return mp, nil
+	}
+
+}
+
+func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (string, error) {
+
+	var requestedValue string
+	if dbFlag {
+		mp, err = DBUpload(storeDB, mp)
+		if err != nil {
+			log.Printf("Error happened in retrieveing metrics. Err: %s", err)
+			return requestedValue, err
+		}
+
+		if mp.Delta != nil {
+			requestedValue = fmt.Sprintf("%v", mp.Delta)
+			return requestedValue, err
+		} else {
+			return fmt.Sprintf("%v", mp.Value), err
+		}
+		
+	} else {
 	v := reflect.ValueOf(mp)
-	var delta int64
-
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
 		err = errors.New("failed metrics retrieval")
 		log.Printf("Error happened in validating metrics name. Err: %s", err)
-		return mp, err
-	}
-	fieldType, ok := v.Field(1).Interface().(string)
-	if !ok {
-		err = errors.New("failed metrics retrieval")
-		log.Printf("Error happened in validating metrics type. Err: %s", err)
-		return mp, err
-	}
-
-	if fieldType == metrics.Counter {
-		if _, ok := metrics.Container[fieldName].(float64); ok {
-			valOld := metrics.Container[fieldName].(float64)
-			delta = int64(valOld)
-		} else {
-			delta = metrics.Container[fieldName].(int64)
-		}
-		mp.Delta = &delta
-	} else {
-		value := metrics.Container[fieldName].(float64)
-		mp.Value = &value
-	}
-
-	return mp, nil
-
-}
-
-func RepositoryRetrieveString(mp metrics.Metrics) (string, error) {
-
-	v := reflect.ValueOf(mp)
-	var requestedValue string
-	fieldName, ok := v.Field(0).Interface().(string)
-	if !ok {
-		err = errors.New("failed metrics retrieval")
-		log.Printf("Error happened in validating metrics type. Err: %s", err)
 		return requestedValue, err
 	}
 	requestedValue = fmt.Sprintf("%v", metrics.Container[fieldName])
 
 	return requestedValue, nil
-
+	}
 }
 
 func StaticFileSave(storeFile string) {
@@ -171,43 +195,25 @@ func StaticFileUpload(storeFile string) {
 
 }
 
-func DBSave(storeDB *sql.DB) {
+func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
+	// не забываем освободить ресурс
+	defer cancel()
 
-	for fieldName := range metrics.Container { 
-
-		if _, ok := metrics.Container[fieldName].(float64); ok {
-			value := metrics.Container[fieldName].(float64)
-			_, err := storeDB.ExecContext(ctx,
-				"INSERT INTO metrics (name, value) VALUES ($1, $2)",
-				fieldName,
-				value,
-			)
-			if err != nil {
-				log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
-				return
-			}
-		} else {
-			delta := metrics.Container[fieldName].(int64)
-			_, err := storeDB.ExecContext(ctx,
-				"INSERT INTO metrics (name, delta) VALUES ($1, $2)",
-				fieldName,
-				delta,
-			)
-			if err != nil {
-				log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
-				return
-			}
-
-		}
+	_, err := storeDB.ExecContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3);",
+				metricsObj.ID,
+				metricsObj.Value,
+				metricsObj.Delta,
+	)
+	if err != nil {
+			log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
+			return
 	}
-	log.Printf("saved container data to DB")
+	log.Printf("saved metrics data to DB")
 }
 
-func DBSaveBatch(storeDB *sql.DB, metrics []metrics.Metrics) error {
+func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		// не забываем освободить ресурс
@@ -231,7 +237,7 @@ func DBSaveBatch(storeDB *sql.DB, metrics []metrics.Metrics) error {
 	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
 	defer stmt.Close()
 	
-	for _, v := range metrics {
+	for _, v := range metricsObj {
 	// шаг 3 — указываем, что каждое будет добавлено в транзакцию
 		if _, err = stmt.ExecContext(ctx, v.ID, v.Value, v.Delta); err != nil {
 			log.Printf("Error happened when declaring transaction. Err: %s", err)
@@ -243,51 +249,42 @@ func DBSaveBatch(storeDB *sql.DB, metrics []metrics.Metrics) error {
 	return tx.Commit()
 } 
 
-func DBUpload(storeDB *sql.DB) {
+func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics) (metrics.Metrics, error) {
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
-		var uploadedValue float64
-		var uploadedDelta int64
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+	var uploadedValue *float64
+	var uploadedDelta *int64
 
-		latestMetrics, err := storeDB.QueryContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT name, delta, value FROM ranked_metrics WHERE rn = 1;")
-		if err != nil {
-			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+	err := storeDB.QueryRowContext(ctx, "WITH ranked_metrics AS (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY name ORDER BY metrics_id DESC) AS rn FROM metrics AS m) SELECT value FROM ranked_metrics WHERE name = ($1) AND rn = 1;", metricsObj.ID).Scan(&uploadedValue)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error at first query")
+		log.Printf("Error happened when extracting delta entry from sql table. Err: %s", err)
+		return metricsObj, err
+	}	
+	if uploadedValue == nil {
+		err := storeDB.QueryRowContext(ctx, "SELECT  SUM(delta) FROM metrics WHERE name=($1);", metricsObj.ID).Scan(&uploadedDelta)
+		log.Println("Error at second query")
+		if err != nil && err != sql.ErrNoRows{
+			log.Printf("Error happened when extracting delta entry from sql table. Err: %s", err)
+			return metricsObj, err
 		}
-
-		defer func() {
-			_ = latestMetrics.Close()
-			_ = latestMetrics.Err() 
-		}()
-		for latestMetrics.Next() {
-			var row metrics.Metrics
-			if err := latestMetrics.Scan(&row.ID, &row.Delta, &row.Value); err != nil {
-				log.Fatalf("Error happened when iterating over entries in sql table. Err: %s", err)
-			} else {
-				if row.Delta != nil {
-					err := storeDB.QueryRowContext(ctx, "SELECT  SUM(delta) FROM metrics WHERE name=$1;", row.ID).Scan(&row.Delta)
-					if err != nil {
-						log.Fatalf("Error happened when extracting delta entry from sql table. Err: %s", err)
-					}
-					uploadedDelta = *row.Delta
-					metrics.Container[row.ID] = uploadedDelta
-				} else {
-					uploadedValue = *row.Value
-					metrics.Container[row.ID] = uploadedValue
-				}
-			}
-		}
-		log.Printf("uploaded data from DB")
-		s, err := json.Marshal(metrics.Container)
-		if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
-			return
-		}
-		log.Print(string(s))
+		metricsObj.Delta = uploadedDelta
+	} else {
+		metricsObj.Value = uploadedValue
+	}
+	log.Printf("uploaded data from DB")
+	s, err := json.Marshal(metricsObj)
+	if err != nil {
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
+		return metricsObj, err
+	}
+	log.Print(string(s))
+	return metricsObj, nil
 }
 
-func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr string, storeParameter string) {
+func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, storeParameter string) {
 
 	var ticker *time.Ticker
 	if strings.Contains(storeParameter, "m") {
@@ -299,14 +296,10 @@ func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, connStr st
 
 	for range ticker.C {
 		
-		if len(connStr) > 0 { 
-			DBSave(storeDB)
-		} else {
-			if len(storeFile) > 0 {
-				StaticFileSave(storeFile)
-			}
-		}
+		StaticFileSave(storeFile)
+			
 	}
+	
 }
 
 

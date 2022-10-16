@@ -10,6 +10,8 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"fmt"
+	"context"
+	"time"
 	"database/sql"
 	_ "github.com/lib/pq"
 )
@@ -86,7 +88,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		}
 	}
 
-	err = storage.RepositoryUpdate(updateParams)
+	err = storage.RepositoryUpdate(updateParams, ws.DB, ws.DBFlag)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -98,15 +100,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		rw.Write(jsonResp)
 		return
 	}
-	if ws.DBFlag {
-		storage.DBSave(ws.DB)
-	}
-	s, err := json.Marshal(metrics.Container)
-	if err != nil {
-		log.Printf("Error happened in JSON marshal. Err: %s", err)
-		return
-	}
-	log.Print(string(s))
+
 	rw.WriteHeader(http.StatusOK)
 	resp["status"] = "ok"
 	jsonResp, err := json.Marshal(resp)
@@ -159,7 +153,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 		structParams = metrics.Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
 	}
 
-	err = storage.RepositoryUpdate(structParams)
+	err = storage.RepositoryUpdate(structParams, ws.DB, ws.DBFlag)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -256,7 +250,20 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 
 	defer r.Body.Close()
 
-	if _, ok := metrics.Container[receivedParams.ID]; !ok {
+	var ok bool
+	if ws.DBFlag {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
+    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
+		if err != nil && err != sql.ErrNoRows {
+			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+		}
+	} else {
+		_, ok = metrics.Container[receivedParams.ID] 
+	}
+
+	if !ok {
 		log.Printf("missing params value")
 		receivedS, err := json.Marshal(receivedParams)
 		if err != nil {
@@ -287,7 +294,8 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 		return
 	}
 
-	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams)
+	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, ws.DB, ws.DBFlag)
+
 	if len(ws.Hashkey) > 0 {
 		if retrievedMetrics.MType == metrics.Counter {
 			log.Println("Retrieving hash value")
@@ -330,7 +338,20 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 	params := urlPart["name"]
 	fieldType := urlPart["type"]
 
-	if _, ok := metrics.Container[params]; !ok {
+	var ok bool
+	if ws.DBFlag {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
+    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
+		if err != nil && err != sql.ErrNoRows {
+			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+		}
+	} else {
+		_, ok = metrics.Container[params] 
+	}
+
+	if !ok {
 		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusNotFound)
 		resp["status"] = "missing parameter"
@@ -356,7 +377,7 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 	}
 
 	var structParams = metrics.Metrics{ID: params, MType: urlPart["name"]}
-	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams)
+	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams, ws.DB, ws.DBFlag)
 
 	if getErr != nil {
 		rw.Header().Set("Content-Type", "application/json")

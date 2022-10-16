@@ -73,17 +73,17 @@ func main() {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 
 		}
-		if restoreValue {
-			storage.DBUpload(db)
-		}
+
 		handlersWithKey.DB = db
 		handlersWithKey.DBFlag = true
-		defer db.Close()
-		
+		defer db.Close()	
 		
 	} else {
-		if len(*storeFile) > 0 && restoreValue {
-			storage.StaticFileUpload(*storeFile)
+		if len(*storeFile) > 0 {
+			if restoreValue {
+				storage.StaticFileUpload(*storeFile)
+			}
+			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
 		}
 		handlersWithKey.DBFlag = false
 	}
@@ -103,7 +103,6 @@ func main() {
 		Addr:    *host,
 	}
 
-	go storage.ContainerUpdate(storeInt, *storeFile, db,  *connStr, *storeParameter)
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("HTTP server error: %v", err)
@@ -123,12 +122,8 @@ func main() {
 	}
 	log.Println("Graceful shutdown complete.")
 
-	if len(*connStr) > 0 {
-		storage.DBSave(db)
-	} else {
-		if len(*storeFile) > 0 {
-			storage.StaticFileSave(*storeFile)
-		}
+	if len(*storeFile) > 0 && len(*connStr) == 0 {
+		storage.StaticFileSave(*storeFile)
 	}
 
 }
