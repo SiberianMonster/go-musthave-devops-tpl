@@ -30,6 +30,7 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 
 	if dbFlag {
 		DBSave(storeDB, mp)
+		return nil
 	} else {
 		v := reflect.ValueOf(mp)
 		var newValue float64
@@ -38,7 +39,12 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 		fieldName := v.Field(0).Interface().(string)
 		fieldType := v.Field(1).Interface().(string)
 
-		if fieldType == metrics.Counter {
+		if fieldType != metrics.Counter {
+			newValue = *mp.Value
+			log.Printf("New gauge %f\n", newValue)
+			metrics.Container[fieldName] = newValue
+			return nil
+		} else {
 			newDelta = *mp.Delta
 			log.Printf("New counter %d\n", newDelta)
 			if _, ok := metrics.Container[fieldName]; ok {
@@ -61,14 +67,9 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 				newDelta = oldDelta + newDelta
 			}
 			metrics.Container[fieldName] = newDelta
-		} else {
-			newValue = *mp.Value
-			log.Printf("New gauge %f\n", newValue)
-			metrics.Container[fieldName] = newValue
+			return nil
 		}
 	}
-
-	return nil
 
 }
 
