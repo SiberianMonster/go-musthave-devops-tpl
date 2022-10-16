@@ -343,7 +343,7 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
-    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
+    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", params).Scan(&ok)
 		if err != nil && err != sql.ErrNoRows {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
 		}
