@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
@@ -252,7 +253,7 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 
 	var ok bool
 	if ws.DBFlag {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
     	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
@@ -340,7 +341,7 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 
 	var ok bool
 	if ws.DBFlag {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
     	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", params).Scan(&ok)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"time"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"database/sql"
 	_ "github.com/lib/pq"
@@ -251,7 +252,7 @@ func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics) error {
 
 func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics) (metrics.Metrics, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 	// не забываем освободить ресурс
 	defer cancel()
 	var uploadedValue *float64
