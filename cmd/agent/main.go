@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"log"
 	"net/http"
 	"net/url"
@@ -21,7 +22,7 @@ var pollCounterEnv, reportCounterEnv string
 
 func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 
-	var m generalutils.MetricsContainer
+	var m metrics.MetricsContainer
 	var rtm runtime.MemStats
 	var v reflect.Value
 	var typeOfS reflect.Type
@@ -37,7 +38,6 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
 	m.PollCount = 0
-	client := &http.Client{}
 
 	for {
 
@@ -45,7 +45,7 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 		case <-pollTicker.C:
 			// update stats
 			runtime.ReadMemStats(&rtm)
-			m = generalutils.MetricsUpdate(m, rtm)
+			m = metrics.MetricsUpdate(m, rtm)
 			v = reflect.ValueOf(m)
 			typeOfS = v.Type()
 		case <-reportTicker.C:
@@ -59,37 +59,29 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 				}
 				url.Path += "update/"
 
-				var metrics generalutils.Metrics
+				var metricsObj metrics.Metrics
 
 				if v.Field(i).Kind() == reflect.Float64 {
-					metrics.ID = typeOfS.Field(i).Name
-					metrics.MType = generalutils.Gauge
+					metricsObj.ID = typeOfS.Field(i).Name
+					metricsObj.MType = metrics.Gauge
 					value := v.Field(i).Interface().(float64)
-					metrics.Value = &value
+					metricsObj.Value = &value
 
 				} else {
-					metrics.ID = typeOfS.Field(i).Name
-					metrics.MType = generalutils.Counter
+					metricsObj.ID = typeOfS.Field(i).Name
+					metricsObj.MType = metrics.Counter
 					delta := v.Field(i).Interface().(int64)
-					metrics.Delta = &delta
+					metricsObj.Delta = &delta
 				}
 
-				body, err := json.Marshal(metrics)
+				body, err := json.Marshal(metricsObj)
 				if err != nil {
-					log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+					log.Printf("Error happened in JSON marshal. Err: %s", err)
 					return err
 				}
 				log.Print(string(body))
 
-				request, err := http.NewRequest(http.MethodPost, url.String(), bytes.NewBuffer(body))
-				if err != nil {
-					log.Fatalf("Error happened when request made. Err: %s", err)
-					return err
-				}
-
-				request.Header.Set("Content-Type", "application/json")
-				request.Header.Set("Accept", "application/json")
-				response, err := client.Do(request)
+				response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
 				if err != nil {
 					log.Printf("Error happened when response received. Err: %s", err)
 					continue
@@ -103,17 +95,15 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 				// response status
 				log.Printf("Status code %q\n", response.Status)
 			}
-
 		}
-
 	}
 }
 
 func init() {
 
-	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	pollCounterEnv = strings.Replace(*generalutils.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
-	reportCounterEnv = strings.Replace(*generalutils.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
+	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
+	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
 
 }
 

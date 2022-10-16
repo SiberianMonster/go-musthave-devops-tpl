@@ -5,7 +5,8 @@ import (
 	"errors"
 	"flag"
 	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
@@ -25,12 +26,12 @@ var storeInterval string
 
 func init() {
 
-	generalutils.Container = make(map[string]interface{})
+	metrics.Container = make(map[string]interface{})
 
-	host = generalutils.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	storeInterval = strings.Replace(*generalutils.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
-	storeFile = generalutils.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
-	restore = generalutils.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
+	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	storeInterval = strings.Replace(*config.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL")), "s", "", -1)
+	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
+	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 
 }
 
@@ -48,7 +49,9 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	storage.StaticFileUpload(*storeFile, restoreValue)
+	if restore {
+		storage.StaticFileUpload(*storeFile)
+	}
 
 	go storage.StaticFileUpdate(storeInt, *storeFile)
 
@@ -78,7 +81,7 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), 40*time.Second)
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)
 	defer shutdownRelease()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {

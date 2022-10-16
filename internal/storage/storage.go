@@ -9,16 +9,16 @@ import (
 	"os"
 	"reflect"
 	"time"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 )
 
 var err error
 
-func RepositoryUpdate(mp generalutils.Metrics) error {
+func RepositoryUpdate(mp metrics.Metrics) error {
 
 	smp, err := json.Marshal(mp)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return err
 	}
 	log.Print(string(smp))
@@ -29,12 +29,18 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 	fieldName := v.Field(0).Interface().(string)
 	fieldType := v.Field(1).Interface().(string)
 
-	if fieldType == generalutils.Counter {
+	if fieldType != metrics.Counter {
+		newValue = *mp.Value
+		log.Printf("New gauge %f\n", newValue)
+		metrics.Container[fieldName] = newValue
+		return nil
+
+	} else {
 		newDelta = *mp.Delta
 		log.Printf("New counter %d\n", newDelta)
-		if _, ok := generalutils.Container[fieldName]; ok {
-			if _, ok := generalutils.Container[fieldName].(float64); ok {
-				valOld, ok := generalutils.Container[fieldName].(float64)
+		if _, ok := metrics.Container[fieldName]; ok {
+			if _, ok := metrics.Container[fieldName].(float64); ok {
+				valOld, ok := metrics.Container[fieldName].(float64)
 				if !ok {
 					err = errors.New("failed metrics retrieval")
 					log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
@@ -42,7 +48,7 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 				}
 				oldDelta = int64(valOld)
 			} else {
-				oldDelta, ok = generalutils.Container[fieldName].(int64)
+				oldDelta, ok = metrics.Container[fieldName].(int64)
 				if !ok {
 					err = errors.New("failed metrics retrieval")
 					log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
@@ -51,18 +57,13 @@ func RepositoryUpdate(mp generalutils.Metrics) error {
 			}
 			newDelta = oldDelta + newDelta
 		}
-		generalutils.Container[fieldName] = newDelta
-	} else {
-		newValue = *mp.Value
-		log.Printf("New gauge %f\n", newValue)
-		generalutils.Container[fieldName] = newValue
+		metrics.Container[fieldName] = newDelta
+		return nil
 	}
-
-	return nil
 
 }
 
-func RepositoryRetrieve(mp generalutils.Metrics) (generalutils.Metrics, error) {
+func RepositoryRetrieve(mp metrics.Metrics) (metrics.Metrics, error) {
 
 	v := reflect.ValueOf(mp)
 	var delta int64
@@ -70,26 +71,26 @@ func RepositoryRetrieve(mp generalutils.Metrics) (generalutils.Metrics, error) {
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
 		err = errors.New("failed metrics retrieval")
-		log.Fatalf("Error happened in validating metrics name. Err: %s", err)
+		log.Printf("Error happened in validating metrics name. Err: %s", err)
 		return mp, err
 	}
 	fieldType, ok := v.Field(1).Interface().(string)
 	if !ok {
 		err = errors.New("failed metrics retrieval")
-		log.Fatalf("Error happened in validating metrics type. Err: %s", err)
+		log.Printf("Error happened in validating metrics type. Err: %s", err)
 		return mp, err
 	}
 
-	if fieldType == generalutils.Counter {
-		if _, ok := generalutils.Container[fieldName].(float64); ok {
-			valOld := generalutils.Container[fieldName].(float64)
+	if fieldType == metrics.Counter {
+		if _, ok := metrics.Container[fieldName].(float64); ok {
+			valOld := metrics.Container[fieldName].(float64)
 			delta = int64(valOld)
 		} else {
-			delta = generalutils.Container[fieldName].(int64)
+			delta = metrics.Container[fieldName].(int64)
 		}
 		mp.Delta = &delta
 	} else {
-		value := generalutils.Container[fieldName].(float64)
+		value := metrics.Container[fieldName].(float64)
 		mp.Value = &value
 	}
 
@@ -97,7 +98,7 @@ func RepositoryRetrieve(mp generalutils.Metrics) (generalutils.Metrics, error) {
 
 }
 
-func RepositoryRetrieveString(mp generalutils.Metrics) (string, error) {
+func RepositoryRetrieveString(mp metrics.Metrics) (string, error) {
 
 	v := reflect.ValueOf(mp)
 	var requestedValue string
@@ -107,7 +108,7 @@ func RepositoryRetrieveString(mp generalutils.Metrics) (string, error) {
 		log.Printf("Error happened in validating metrics type. Err: %s", err)
 		return requestedValue, err
 	}
-	requestedValue = fmt.Sprintf("%v", generalutils.Container[fieldName])
+	requestedValue = fmt.Sprintf("%v", metrics.Container[fieldName])
 
 	return requestedValue, nil
 
@@ -117,25 +118,25 @@ func StaticFileSave(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
 		return
 	}
 	writer := bufio.NewWriter(file)
 
-	data, err := json.Marshal(&generalutils.Container)
+	data, err := json.Marshal(&metrics.Container)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return
 	}
 	if len(data) > 3 {
 		log.Print(string(data))
 		if _, err := writer.Write(data); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 			return
 		}
 
 		if err := writer.WriteByte('\n'); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 			return
 		}
 		writer.Flush()
@@ -145,12 +146,11 @@ func StaticFileSave(storeFile string) {
 
 }
 
-func StaticFileUpload(storeFile string, restore bool) {
+func StaticFileUpload(storeFile string) {
 
-	if restore {
 		file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
 		if err != nil {
-			log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+			log.Printf("Error happened in JSON file opening. Err: %s", err)
 			return
 
 		} else {
@@ -161,7 +161,7 @@ func StaticFileUpload(storeFile string, restore bool) {
 				log.Printf("Error happened in reading JSON file bytes. Err: %s", err)
 				return
 			} else {
-				err = json.Unmarshal([]byte(data), &generalutils.Container)
+				err = json.Unmarshal([]byte(data), &metrics.Container)
 				log.Print(string(data))
 				if err != nil {
 					log.Printf("No JSON data to decode")
@@ -169,8 +169,6 @@ func StaticFileUpload(storeFile string, restore bool) {
 			}
 			file.Close()
 		}
-
-	}
 }
 
 func StaticFileUpdate(storeInt int, storeFile string) {
@@ -178,7 +176,9 @@ func StaticFileUpdate(storeInt int, storeFile string) {
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
 	for range ticker.C {
-		StaticFileSave(storeFile)
+		if len(storeFile) > 0 {
+			StaticFileSave(storeFile)
+		}
 	}
 }
 

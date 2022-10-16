@@ -4,13 +4,13 @@ import (
 	"compress/gzip"
 	"net/http"
 	"strings"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
 func GzipHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if r.Header.Get(`Content-Encoding`) == `gzip` {
+		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			gz, err := gzip.NewReader(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -24,10 +24,11 @@ func GzipHandler(h http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
+		
 		w.Header().Set("Content-Encoding", "gzip")
 		gz := gzip.NewWriter(w)
 		defer gz.Close()
-		h.ServeHTTP(generalutils.GzipWriter{ResponseWriter: w, Writer: gz}, r)
+		h.ServeHTTP(httpp.GzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }
 

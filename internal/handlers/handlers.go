@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/generalutils"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 )
 
@@ -18,7 +18,7 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Header().Set("Connection", "close")
-	var updateParams generalutils.Metrics
+	var updateParams metrics.Metrics
 
 	err := json.NewDecoder(r.Body).Decode(&updateParams)
 
@@ -27,7 +27,7 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "missing json body"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -36,12 +36,12 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	if updateParams.MType != generalutils.Counter && updateParams.MType != generalutils.Gauge {
+	if updateParams.MType != metrics.Counter && updateParams.MType != metrics.Gauge {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "invalid type"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -54,15 +54,15 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "update failed"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
-	s, err := json.Marshal(generalutils.Container)
+	s, err := json.Marshal(metrics.Container)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return
 	}
 	log.Print(string(s))
@@ -70,7 +70,7 @@ func UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 	resp["status"] = "ok"
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return
 	}
 	rw.Write(jsonResp)
@@ -85,7 +85,7 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 	urlPart := mux.Vars(r)
 	log.Printf(urlPart["name"])
 
-	var structParams generalutils.Metrics
+	var structParams metrics.Metrics
 	fv, err := strconv.ParseFloat(urlPart["value"], 64)
 	
 	if err != nil {
@@ -93,29 +93,29 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "wrong value"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
 	fieldType := urlPart["type"]
-	if fieldType != generalutils.Counter && fieldType != generalutils.Gauge {
+	if fieldType != metrics.Counter && fieldType != metrics.Gauge {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "missing type"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
-	if fieldType == generalutils.Counter {
+	if fieldType == metrics.Counter {
 		fvCounter := int64(fv)
-		structParams = generalutils.Metrics{ID: urlPart["name"], MType: urlPart["type"], Delta: &fvCounter}
+		structParams = metrics.Metrics{ID: urlPart["name"], MType: urlPart["type"], Delta: &fvCounter}
 	} else {
-		structParams = generalutils.Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
+		structParams = metrics.Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
 	}
 
 	err = storage.RepositoryUpdate(structParams)
@@ -124,7 +124,7 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "update failed"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -134,7 +134,7 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 	resp["status"] = "ok"
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return
 	}
 	rw.Write(jsonResp)
@@ -145,7 +145,7 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
-	var receivedParams generalutils.Metrics
+	var receivedParams metrics.Metrics
 
 	err := json.NewDecoder(r.Body).Decode(&receivedParams)
 	
@@ -154,7 +154,7 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "missing json body"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -163,11 +163,11 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	if _, ok := generalutils.Container[receivedParams.ID]; !ok {
+	if _, ok := metrics.Container[receivedParams.ID]; !ok {
 		log.Printf("missing params value")
 		receivedS, err := json.Marshal(receivedParams)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		log.Print(string(receivedS))
@@ -175,19 +175,19 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "missing parameter"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
 
-	if receivedParams.MType != generalutils.Counter && receivedParams.MType != generalutils.Gauge {
+	if receivedParams.MType != metrics.Counter && receivedParams.MType != metrics.Gauge {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "invalid type"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -201,7 +201,7 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "value retrieval failed"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -222,32 +222,32 @@ func ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 	params := urlPart["name"]
 	fieldType := urlPart["type"]
 
-	if _, ok := generalutils.Container[params]; !ok {
+	if _, ok := metrics.Container[params]; !ok {
 		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusNotFound)
 		resp["status"] = "missing parameter"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
-	if fieldType != generalutils.Counter && fieldType != generalutils.Gauge {
+	if fieldType != metrics.Counter && fieldType != metrics.Gauge {
 		rw.Header().Set("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "invalid type"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
 		return
 	}
 
-	var structParams = generalutils.Metrics{ID: params, MType: urlPart["name"]}
+	var structParams = metrics.Metrics{ID: params, MType: urlPart["name"]}
 	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams)
 
 	if getErr != nil {
@@ -256,7 +256,7 @@ func ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 		resp["status"] = "value retrieval failed"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
-			log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
 			return
 		}
 		rw.Write(jsonResp)
@@ -272,9 +272,9 @@ func ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 func GenericHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	log.Printf("Got to generic endpoint")
-	s, err := json.Marshal(generalutils.Container)
+	s, err := json.Marshal(metrics.Container)
 	if err != nil {
-		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 		return
 	}
 	log.Print(string(s))
