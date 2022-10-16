@@ -49,7 +49,7 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	if restore {
+	if restoreValue {
 		storage.StaticFileUpload(*storeFile)
 	}
 
