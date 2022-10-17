@@ -31,44 +31,44 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 	if dbFlag {
 		DBSave(storeDB, mp)
 		return nil
+	}
+	v := reflect.ValueOf(mp)
+	var newValue float64
+	var newDelta int64
+	var oldDelta int64
+	fieldName := v.Field(0).Interface().(string)
+	fieldType := v.Field(1).Interface().(string)
 
-		v := reflect.ValueOf(mp)
-		var newValue float64
-		var newDelta int64
-		var oldDelta int64
-		fieldName := v.Field(0).Interface().(string)
-		fieldType := v.Field(1).Interface().(string)
-
-		if fieldType != metrics.Counter {
-			newValue = *mp.Value
-			log.Printf("New gauge %f\n", newValue)
-			metrics.Container[fieldName] = newValue
-			return nil
-		}
-		newDelta = *mp.Delta
-		log.Printf("New counter %d\n", newDelta)
-		if _, ok := metrics.Container[fieldName]; ok {
-			if _, ok := metrics.Container[fieldName].(float64); ok {
-				valOld, ok := metrics.Container[fieldName].(float64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-				oldDelta = int64(valOld)
-			} else {
-				oldDelta, ok = metrics.Container[fieldName].(int64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-			}
-			newDelta = oldDelta + newDelta
-		}
-		metrics.Container[fieldName] = newDelta
+	if fieldType != metrics.Counter {
+		newValue = *mp.Value
+		log.Printf("New gauge %f\n", newValue)
+		metrics.Container[fieldName] = newValue
 		return nil
 	}
+	newDelta = *mp.Delta
+	log.Printf("New counter %d\n", newDelta)
+	if _, ok := metrics.Container[fieldName]; ok {
+		if _, ok := metrics.Container[fieldName].(float64); ok {
+			valOld, ok := metrics.Container[fieldName].(float64)
+			if !ok {
+				err = errors.New("failed metrics retrieval")
+				log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
+				return err
+			}
+			oldDelta = int64(valOld)
+		} else {
+			oldDelta, ok = metrics.Container[fieldName].(int64)
+			if !ok {
+				err = errors.New("failed metrics retrieval")
+				log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
+				return err
+			}
+		}
+		newDelta = oldDelta + newDelta
+	}
+	metrics.Container[fieldName] = newDelta
+	return nil
+
 }
 
 func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (metrics.Metrics, error) {
