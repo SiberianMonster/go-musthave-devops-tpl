@@ -5,10 +5,9 @@ import (
 )
 
 const (
-	ContextDBTimeout = 5
+	ContextDBTimeout  = 5
 	ContextSrvTimeout = 10
 )
-
 
 func GetEnv(key string, fallback *string) *string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -16,5 +15,3 @@ func GetEnv(key string, fallback *string) *string {
 	}
 	return fallback
 }
-
-

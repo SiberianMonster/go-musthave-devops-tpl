@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
@@ -49,11 +49,12 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
-	if restoreValue {
-		storage.StaticFileUpload(*storeFile)
+	if len(*storeFile) > 1 {
+		if restoreValue {
+			storage.StaticFileUpload(*storeFile)
+		}
+		go storage.StaticFileUpdate(storeInt, *storeFile)
 	}
-
-	go storage.StaticFileUpdate(storeInt, *storeFile)
 
 	r := mux.NewRouter()
 
@@ -88,6 +89,9 @@ func main() {
 		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
-	storage.StaticFileSave(*storeFile)
+
+	if len(*storeFile) > 1 {
+		storage.StaticFileSave(*storeFile)
+	}
 
 }

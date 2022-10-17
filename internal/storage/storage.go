@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"log"
 	"os"
 	"reflect"
 	"time"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 )
 
 var err error
@@ -34,32 +34,31 @@ func RepositoryUpdate(mp metrics.Metrics) error {
 		log.Printf("New gauge %f\n", newValue)
 		metrics.Container[fieldName] = newValue
 		return nil
-
-	} else {
-		newDelta = *mp.Delta
-		log.Printf("New counter %d\n", newDelta)
-		if _, ok := metrics.Container[fieldName]; ok {
-			if _, ok := metrics.Container[fieldName].(float64); ok {
-				valOld, ok := metrics.Container[fieldName].(float64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-				oldDelta = int64(valOld)
-			} else {
-				oldDelta, ok = metrics.Container[fieldName].(int64)
-				if !ok {
-					err = errors.New("failed metrics retrieval")
-					log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
-					return err
-				}
-			}
-			newDelta = oldDelta + newDelta
-		}
-		metrics.Container[fieldName] = newDelta
-		return nil
 	}
+	// код для обработки fieldType == generalutils.Counter
+	newDelta = *mp.Delta
+	log.Printf("New counter %d\n", newDelta)
+	if _, ok := metrics.Container[fieldName]; ok {
+		if _, ok := metrics.Container[fieldName].(float64); ok {
+			valOld, ok := metrics.Container[fieldName].(float64)
+			if !ok {
+				err = errors.New("failed metrics retrieval")
+				log.Printf("Error happened in reading metrics from loaded storage. Metrics: %s Err: %s", fieldName, err)
+				return err
+			}
+			oldDelta = int64(valOld)
+		} else {
+			oldDelta, ok = metrics.Container[fieldName].(int64)
+			if !ok {
+				err = errors.New("failed metrics retrieval")
+				log.Printf("Error happened in reading container metrics. Metrics: %s Err: %s", fieldName, err)
+				return err
+			}
+		}
+		newDelta = oldDelta + newDelta
+	}
+	metrics.Container[fieldName] = newDelta
+	return nil
 
 }
 
@@ -105,7 +104,7 @@ func RepositoryRetrieveString(mp metrics.Metrics) (string, error) {
 	fieldName, ok := v.Field(0).Interface().(string)
 	if !ok {
 		err = errors.New("failed metrics retrieval")
-		log.Printf("Error happened in validating metrics type. Err: %s", err)
+		log.Printf("Error happened in validating metrics name. Err: %s", err)
 		return requestedValue, err
 	}
 	requestedValue = fmt.Sprintf("%v", metrics.Container[fieldName])
@@ -148,27 +147,27 @@ func StaticFileSave(storeFile string) {
 
 func StaticFileUpload(storeFile string) {
 
-		file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
-		if err != nil {
-			log.Printf("Error happened in JSON file opening. Err: %s", err)
-			return
+	file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
+	if err != nil {
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
+		return
 
+	} else {
+		log.Printf("Uploading data from JSON")
+		reader := bufio.NewReader(file)
+		data, err := reader.ReadBytes('\n')
+		if err != nil {
+			log.Printf("Error happened in reading JSON file bytes. Err: %s", err)
+			return
 		} else {
-			log.Printf("Uploading data from JSON")
-			reader := bufio.NewReader(file)
-			data, err := reader.ReadBytes('\n')
+			err = json.Unmarshal([]byte(data), &metrics.Container)
+			log.Print(string(data))
 			if err != nil {
-				log.Printf("Error happened in reading JSON file bytes. Err: %s", err)
-				return
-			} else {
-				err = json.Unmarshal([]byte(data), &metrics.Container)
-				log.Print(string(data))
-				if err != nil {
-					log.Printf("No JSON data to decode")
-				}
+				log.Printf("No JSON data to decode")
 			}
-			file.Close()
 		}
+		file.Close()
+	}
 }
 
 func StaticFileUpdate(storeInt int, storeFile string) {
@@ -176,9 +175,7 @@ func StaticFileUpdate(storeInt int, storeFile string) {
 	ticker := time.NewTicker(time.Duration(storeInt) * time.Second)
 
 	for range ticker.C {
-		if len(storeFile) > 0 {
-			StaticFileSave(storeFile)
-		}
+		StaticFileSave(storeFile)
+
 	}
 }
-

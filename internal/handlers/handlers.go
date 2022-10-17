@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 )
 
 var err error
@@ -87,7 +87,7 @@ func UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	var structParams metrics.Metrics
 	fv, err := strconv.ParseFloat(urlPart["value"], 64)
-	
+
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		resp["status"] = "wrong value"
@@ -148,7 +148,7 @@ func ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 	var receivedParams metrics.Metrics
 
 	err := json.NewDecoder(r.Body).Decode(&receivedParams)
-	
+
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		resp["status"] = "missing json body"
@@ -281,4 +281,3 @@ func GenericHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 	rw.Write([]byte(string(s)))
 }
-
