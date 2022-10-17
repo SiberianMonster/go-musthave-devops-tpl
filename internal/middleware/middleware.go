@@ -2,9 +2,9 @@ package middleware
 
 import (
 	"compress/gzip"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"net/http"
 	"strings"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
 func GzipHandler(h http.Handler) http.Handler {
@@ -18,7 +18,7 @@ func GzipHandler(h http.Handler) http.Handler {
 			}
 			r.Body = gz
 			defer gz.Close()
-		} 
+		}
 
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			h.ServeHTTP(w, r)
@@ -30,4 +30,3 @@ func GzipHandler(h http.Handler) http.Handler {
 		h.ServeHTTP(httpp.GzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }
-

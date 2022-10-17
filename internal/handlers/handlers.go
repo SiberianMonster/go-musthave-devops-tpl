@@ -1,20 +1,20 @@
 package handlers
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"strconv"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
-	"fmt"
-	"context"
 	"time"
-	"database/sql"
-	_ "github.com/lib/pq"
 )
 
 var err error
@@ -22,9 +22,9 @@ var resp map[string]string
 var testHash string
 
 type WrapperJSONStruct struct {
-    Hashkey string
-	DB *sql.DB
-	DBFlag bool
+	Hashkey string
+	DB      *sql.DB
+	DBFlag  bool
 }
 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
@@ -74,7 +74,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 				log.Fatalf("Error happened when hashing received value. Err: %s", err)
 			}
 		}
-		
+
 		if testHash != updateParams.Hash {
 			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
 			rw.WriteHeader(http.StatusBadRequest)
@@ -123,7 +123,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 
 	var structParams metrics.Metrics
 	fv, err := strconv.ParseFloat(urlPart["value"], 64)
-	
+
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
 		resp["status"] = "wrong value"
@@ -236,7 +236,7 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 	var receivedParams metrics.Metrics
 
 	err := json.NewDecoder(r.Body).Decode(&receivedParams)
-	
+
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		resp["status"] = "missing json body"
@@ -256,12 +256,12 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
-    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
+		err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
 		if err != nil && err != sql.ErrNoRows {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
 		}
 	} else {
-		_, ok = metrics.Container[receivedParams.ID] 
+		_, ok = metrics.Container[receivedParams.ID]
 	}
 
 	if !ok {
@@ -344,12 +344,12 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
-    	err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", params).Scan(&ok)
+		err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", params).Scan(&ok)
 		if err != nil && err != sql.ErrNoRows {
 			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
 		}
 	} else {
-		_, ok = metrics.Container[params] 
+		_, ok = metrics.Container[params]
 	}
 
 	if !ok {
@@ -416,10 +416,10 @@ func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Requ
 
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
-	
+
 	pingErr := ws.DB.Ping()
-    if pingErr != nil {
-        rw.WriteHeader(http.StatusInternalServerError)
+	if pingErr != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
 		resp["status"] = "failed connection to the database"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
@@ -428,7 +428,7 @@ func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Requ
 		}
 		rw.Write(jsonResp)
 		return
-    }
+	}
 
 	rw.WriteHeader(http.StatusOK)
 	resp["status"] = "ok"
@@ -439,4 +439,3 @@ func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Requ
 	}
 	rw.Write(jsonResp)
 }
-

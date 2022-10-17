@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"flag"
-	"github.com/gorilla/mux"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
@@ -18,8 +20,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"database/sql"
-	_ "github.com/lib/pq"
 )
 
 var err error
@@ -32,12 +32,12 @@ func init() {
 	metrics.Container = make(map[string]interface{})
 
 	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	key = config.GetEnv("KEY", flag.String("k","", "KEY"))
+	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
 	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
-	
+
 }
 
 func main() {
@@ -76,8 +76,8 @@ func main() {
 
 		handlersWithKey.DB = db
 		handlersWithKey.DBFlag = true
-		defer db.Close()	
-		
+		defer db.Close()
+
 	} else {
 		if len(*storeFile) > 0 {
 			if restoreValue {
@@ -87,7 +87,7 @@ func main() {
 		}
 		handlersWithKey.DBFlag = false
 	}
-	
+
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)

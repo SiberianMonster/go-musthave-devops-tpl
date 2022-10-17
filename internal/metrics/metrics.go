@@ -9,7 +9,7 @@ var Container map[string]interface{}
 
 const (
 	Counter = "counter"
-	Gauge = "gauge"
+	Gauge   = "gauge"
 )
 
 type Metrics struct {
