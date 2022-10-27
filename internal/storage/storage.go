@@ -7,9 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	_ "github.com/lib/pq"
+	"go-musthave-devops-tpl/internal/metrics"
 	"log"
 	"os"
 	"reflect"
@@ -19,7 +18,7 @@ import (
 
 var err error
 
-func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
+func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) error {
 
 	smp, err := json.Marshal(mp)
 	if err != nil {
@@ -29,7 +28,11 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 	log.Print(string(smp))
 
 	if dbFlag {
-		DBSave(storeDB, mp)
+		err = DBSave(storeDB, mp, ctx)
+		if err != nil {
+			log.Printf("Error happened in updating database. Err: %s", err)
+			return err
+		}
 		return nil
 	}
 	v := reflect.ValueOf(mp)
@@ -71,10 +74,10 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) error {
 
 }
 
-func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (metrics.Metrics, error) {
+func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) (metrics.Metrics, error) {
 
 	if dbFlag {
-		return DBUpload(storeDB, mp)
+		return DBUpload(storeDB, mp, ctx)
 
 	} else {
 		v := reflect.ValueOf(mp)
@@ -110,11 +113,11 @@ func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (metri
 
 }
 
-func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool) (string, error) {
+func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) (string, error) {
 
 	var requestedValue string
 	if dbFlag {
-		mp, err = DBUpload(storeDB, mp)
+		mp, err = DBUpload(storeDB, mp, ctx)
 		if err != nil {
 			log.Printf("Error happened in retrieveing metrics. Err: %s", err)
 			return requestedValue, err
@@ -195,11 +198,7 @@ func StaticFileUpload(storeFile string) {
 
 }
 
-func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics) {
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
+func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) error {
 
 	_, err := storeDB.ExecContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3);",
 		metricsObj.ID,
@@ -208,16 +207,13 @@ func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics) {
 	)
 	if err != nil {
 		log.Printf("Error happened when inserting a new entry into sql table. Err: %s", err)
-		return
+		return err
 	}
 	log.Printf("saved metrics data to DB")
+	return nil
 }
 
-func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics) error {
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
+func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Context) error {
 
 	// шаг 1 — объявляем транзакцию
 	tx, err := storeDB.Begin()
@@ -249,11 +245,8 @@ func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics) error {
 	return tx.Commit()
 }
 
-func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics) (metrics.Metrics, error) {
+func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) (metrics.Metrics, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
 	var uploadedValue *float64
 	var uploadedDelta *int64
 
@@ -282,6 +275,17 @@ func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics) (metrics.Metrics, err
 	}
 	log.Print(string(s))
 	return metricsObj, nil
+}
+
+func DBCheck(storeDB *sql.DB, name string, ctx context.Context) bool {
+
+	var ok bool
+	err := storeDB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", name).Scan(&ok)
+	if err != nil && err != sql.ErrNoRows {
+		log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+	}
+	log.Printf("checked for metrics in DB")
+	return ok
 }
 
 func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, storeParameter string) {

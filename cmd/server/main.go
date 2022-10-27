@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"go-musthave-devops-tpl/internal/config"
+	"go-musthave-devops-tpl/internal/handlers"
+	"go-musthave-devops-tpl/internal/metrics"
+	"go-musthave-devops-tpl/internal/middleware"
+	"go-musthave-devops-tpl/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -56,7 +56,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
-	handlersWithKey := handlers.WrapperJSONStruct{Hashkey: *key}
+	handlersWithKey := handlers.WrapperJSONStruct{Key: *key}
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
@@ -68,7 +68,7 @@ func main() {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
 		}
 		_, err := db.ExecContext(ctx,
-			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value float)")
+			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
 

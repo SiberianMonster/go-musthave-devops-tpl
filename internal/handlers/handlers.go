@@ -4,13 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"go-musthave-devops-tpl/internal/config"
+	"go-musthave-devops-tpl/internal/metrics"
+	"go-musthave-devops-tpl/internal/storage"
 	"log"
 	"net/http"
 	"strconv"
@@ -22,9 +20,9 @@ var resp map[string]string
 var testHash string
 
 type WrapperJSONStruct struct {
-	Hashkey string
-	DB      *sql.DB
-	DBFlag  bool
+	Key    string
+	DB     *sql.DB
+	DBFlag bool
 }
 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
@@ -62,18 +60,9 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if len(ws.Hashkey) > 0 {
-		if updateParams.MType == metrics.Counter {
-			testHash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", updateParams.ID, *updateParams.Delta), ws.Hashkey)
-			if err != nil {
-				log.Fatalf("Error happened when hashing received value. Err: %s", err)
-			}
-		} else {
-			testHash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", updateParams.ID, *updateParams.Value), ws.Hashkey)
-			if err != nil {
-				log.Fatalf("Error happened when hashing received value. Err: %s", err)
-			}
-		}
+	if ws.Key != "" {
+
+		testHash = metrics.MetricsHash(updateParams, ws.Key)
 
 		if testHash != updateParams.Hash {
 			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
@@ -89,7 +78,11 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		}
 	}
 
-	err = storage.RepositoryUpdate(updateParams, ws.DB, ws.DBFlag)
+	ctx, cancel := context.WithTimeout(r.Context(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
+	err = storage.RepositoryUpdate(updateParams, ws.DB, ws.DBFlag, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -154,7 +147,11 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 		structParams = metrics.Metrics{ID: urlPart["name"], MType: urlPart["type"], Value: &fv}
 	}
 
-	err = storage.RepositoryUpdate(structParams, ws.DB, ws.DBFlag)
+	ctx, cancel := context.WithTimeout(r.Context(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
+	err = storage.RepositoryUpdate(structParams, ws.DB, ws.DBFlag, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -200,7 +197,11 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 
 	defer r.Body.Close()
 
-	err = storage.DBSaveBatch(ws.DB, metricsBatch)
+	ctx, cancel := context.WithTimeout(r.Context(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
+	err = storage.DBSaveBatch(ws.DB, metricsBatch, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "batch update failed"
@@ -251,15 +252,14 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 
 	defer r.Body.Close()
 
+	ctx, cancel := context.WithTimeout(r.Context(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
 	var ok bool
 	if ws.DBFlag {
-		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
-		err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", receivedParams.ID).Scan(&ok)
-		if err != nil && err != sql.ErrNoRows {
-			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
-		}
+		ok = storage.DBCheck(ws.DB, receivedParams.ID, ctx)
+
 	} else {
 		_, ok = metrics.Container[receivedParams.ID]
 	}
@@ -295,22 +295,12 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 		return
 	}
 
-	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, ws.DB, ws.DBFlag)
+	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, ws.DB, ws.DBFlag, ctx)
 
-	if len(ws.Hashkey) > 0 {
-		if retrievedMetrics.MType == metrics.Counter {
-			log.Println("Retrieving hash value")
-			retrievedMetrics.Hash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", retrievedMetrics.ID, *retrievedMetrics.Delta), ws.Hashkey)
-			if err != nil {
-				log.Fatalf("Error happened when hashing received value. Err: %s", err)
-			}
-		} else {
-			retrievedMetrics.Hash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", retrievedMetrics.ID, *retrievedMetrics.Value), ws.Hashkey)
-			log.Println("Retrieving hash value")
-			if err != nil {
-				log.Fatalf("Error happened when hashing received value. Err: %s", err)
-			}
-		}
+	if ws.Key != "" {
+
+		retrievedMetrics.Hash = metrics.MetricsHash(retrievedMetrics, ws.Key)
+
 	}
 	log.Println(retrievedMetrics)
 	if getErr != nil {
@@ -339,15 +329,15 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 	params := urlPart["name"]
 	fieldType := urlPart["type"]
 
+	ctx, cancel := context.WithTimeout(r.Context(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
 	var ok bool
 	if ws.DBFlag {
-		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
-		err := ws.DB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", params).Scan(&ok)
-		if err != nil && err != sql.ErrNoRows {
-			log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
-		}
+
+		ok = storage.DBCheck(ws.DB, params, ctx)
+
 	} else {
 		_, ok = metrics.Container[params]
 	}
@@ -378,7 +368,8 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 	}
 
 	var structParams = metrics.Metrics{ID: params, MType: urlPart["name"]}
-	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams, ws.DB, ws.DBFlag)
+
+	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams, ws.DB, ws.DBFlag, ctx)
 
 	if getErr != nil {
 		rw.Header().Set("Content-Type", "application/json")

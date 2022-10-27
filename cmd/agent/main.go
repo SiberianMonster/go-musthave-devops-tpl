@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
+	"go-musthave-devops-tpl/internal/config"
+	"go-musthave-devops-tpl/internal/metrics"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,8 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
-	"compress/gzip"
 )
 
 var host, key *string
@@ -69,10 +67,8 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 					metricsObj.MType = metrics.Gauge
 					value := v.Field(i).Interface().(float64)
 					metricsObj.Value = &value
-					if len(*key) > 0 {metricsObj.Hash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", metricsObj.ID, value), *key)
-					if err != nil {
-						log.Fatalf("Error happened when hashing. Err: %s", err)
-						}
+					if *key != "" {
+						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
 					}
 
 				} else {
@@ -80,10 +76,8 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 					metricsObj.MType = metrics.Counter
 					delta := v.Field(i).Interface().(int64)
 					metricsObj.Delta = &delta
-					if len(*key) > 0 {metricsObj.Hash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", metricsObj.ID, delta), *key)
-					if err != nil {
-						log.Fatalf("Error happened when hashing. Err: %s", err)
-						}
+					if *key != "" {
+						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
 					}
 				}
 
@@ -93,7 +87,7 @@ func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
 					return err
 				}
 				log.Print(string(body))
-				
+
 				response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
 				if err != nil {
 					log.Printf("Error happened when response received. Err: %s", err)
@@ -162,10 +156,8 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 					metricsObj.MType = metrics.Gauge
 					value := v.Field(i).Interface().(float64)
 					metricsObj.Value = &value
-					if len(*key) > 0 {metricsObj.Hash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", metricsObj.ID, value), *key)
-					if err != nil {
-						log.Fatalf("Error happened when hashing. Err: %s", err)
-						}
+					if *key != "" {
+						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
 					}
 
 				} else {
@@ -173,10 +165,8 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 					metricsObj.MType = metrics.Counter
 					delta := v.Field(i).Interface().(int64)
 					metricsObj.Delta = &delta
-					if len(*key) > 0 {metricsObj.Hash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", metricsObj.ID, delta), *key)
-					if err != nil {
-						log.Fatalf("Error happened when hashing. Err: %s", err)
-						}
+					if *key != "" {
+						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
 					}
 				}
 				metricsBatch = append(metricsBatch, metricsObj)
@@ -184,19 +174,19 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 			if len(metricsBatch) > 0 {
 				body, err := json.Marshal(metricsBatch)
 				if err != nil {
-						log.Printf("Error happened in JSON marshal. Err: %s", err)
-						return err
+					log.Printf("Error happened in JSON marshal. Err: %s", err)
+					return err
 				}
 				log.Print(string(body))
 
 				var buf bytes.Buffer
- 				gz := gzip.NewWriter(&buf)
- 				gz.Write(body)
- 				gz.Close()
+				gz := gzip.NewWriter(&buf)
+				gz.Write(body)
+				gz.Close()
 
 				request, err := http.NewRequest(http.MethodPost, url.String(), &buf)
 				if err != nil {
-						log.Fatalf("Error happened when request made. Err: %s", err)
+					log.Fatalf("Error happened when request made. Err: %s", err)
 				}
 
 				request.Header.Set("Content-Type", "application/json")
@@ -204,18 +194,18 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 				request.Header.Set("Content-Encoding", "gzip")
 				response, err := client.Do(request)
 				if err != nil {
-						log.Printf("Error happened when response received. Err: %s", err)
-						continue
+					log.Printf("Error happened when response received. Err: %s", err)
+					continue
 
 				}
 				err = response.Body.Close()
 				if err != nil {
-						log.Printf("Error happened when response body closed. Err: %s", err)
-						continue
+					log.Printf("Error happened when response body closed. Err: %s", err)
+					continue
 				}
 				// response status
 				log.Printf("Status code %q\n", response.Status)
-				
+
 			}
 
 		}
@@ -228,7 +218,7 @@ func init() {
 	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
 	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
 	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
-	key = config.GetEnv("KEY", flag.String("k","", "KEY"))
+	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
 }
 
 func main() {

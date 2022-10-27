@@ -1,6 +1,9 @@
 package metrics
 
 import (
+	"fmt"
+	"go-musthave-devops-tpl/internal/httpp"
+	"log"
 	"math/rand"
 	"runtime"
 )
@@ -85,4 +88,22 @@ func MetricsUpdate(m MetricsContainer, rtm runtime.MemStats) MetricsContainer {
 	m.RandomValue = rand.Float64()
 	return m
 
+}
+
+func MetricsHash(m Metrics, key string) string {
+
+	var strHash string
+	var err error
+	if m.MType == Counter {
+		strHash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta), key)
+		if err != nil {
+			log.Fatalf("Error happened when hashing received value. Err: %s", err)
+		}
+	} else {
+		strHash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value), key)
+		if err != nil {
+			log.Fatalf("Error happened when hashing received value. Err: %s", err)
+		}
+	}
+	return strHash
 }
