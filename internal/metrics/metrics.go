@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"fmt"
-	"go-musthave-devops-tpl/internal/httpp"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"log"
 	"math/rand"
 	"runtime"

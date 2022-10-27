@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
-	"go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"log"
 	"os"
 	"reflect"
