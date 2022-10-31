@@ -18,6 +18,7 @@ import (
 	"time"
 	"fmt"
 	"github.com/shirou/gopsutil/v3/mem"
+	"sync"
 )
 
 var host, key *string
@@ -27,29 +28,41 @@ var v reflect.Value
 var typeOfS reflect.Type
 var err error
 
-func collectStats(m chan metrics.MetricsContainer) {
+type LockMetricsContainer struct {
+    m  metrics.MetricsContainer
+    mu sync.RWMutex
+}
 
+var Lm LockMetricsContainer
+
+func collectStats() {
+
+	log.Println("Collecting stats")
+	Lm.mu.Lock()
+	defer Lm.mu.Unlock()
 	runtime.ReadMemStats(&rtm)
-	mTemp <- m
-	mTemp = metrics.MetricsUpdate(mTemp, rtm)
-	m <- mTemp
+	Lm.m = metrics.MetricsUpdate(Lm.m, rtm)
 }
 
-func collectMemStats(m chan metrics.MetricsContainer) {
+func collectMemStats() {
 
+	log.Println("Collecting mem stats")
+	Lm.mu.Lock()
+	defer Lm.mu.Unlock()
 	v, _ := mem.VirtualMemory()
-	mTemp <- m
-	mTemp.TotalMemory = v.Total
-	mTemp.FreeMemory = v.Free
-	mTemp.CPUutilization1 = v.UsedPercent
-	m <- mTemp
+	Lm.m.TotalMemory = float64(v.Total)
+	Lm.m.FreeMemory = float64(v.Free)
+	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
-func reportStats(m chan metrics.MetricsContainer, errCh chan<- error) {
+func reportStats(errCh chan<- error) {
 
-	mTemp <- m
-	v = reflect.ValueOf(mTemp)
+	Lm.mu.RLock()
+	defer Lm.mu.RUnlock()
+	v = reflect.ValueOf(Lm.m)
 	typeOfS = v.Type()
+
+	log.Println("Reporting stats")
 
 	for i := 0; i < v.NumField(); i++ {
 
@@ -236,27 +249,29 @@ func main() {
 		err = errors.New("reportduration needs to be larger than pollduration")
 		log.Fatalf("Error happened in setting timer. Err: %s", err)
 	}
-
-	m := make(chan metrics.MetricsContainer)
 	errCh := make(chan error)
+	
 	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
-
-	m.PollCount = 0
 
 	for {
 
 		select {
 		case <-pollTicker.C:
 			// update stats
-			go collectStats(m)
-			go collectMemStats(m)
-			
+			go collectStats()
+			go collectMemStats()
+			body, _ := json.Marshal(Lm.m)
+			log.Print(string(body))
+
 		case <-reportTicker.C:
 			// send stats to the server
-			go reportStats(m, errCh)
+			go reportStats(errCh)
+		
+		}
+	}
 
-	err := <-errCh
+	err = <-errCh
     if err != nil {
         log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
     }
