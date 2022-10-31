@@ -52,6 +52,9 @@ type MetricsContainer struct {
 	TotalAlloc,
 	GCCPUFraction,
 	NumForcedGC,
+	TotalMemory,
+	FreeMemory,
+	CPUutilization1,
 	NumGC float64
 }
 

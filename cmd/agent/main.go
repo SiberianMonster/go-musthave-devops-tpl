@@ -16,97 +16,94 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 var host, key *string
 var pollCounterEnv, reportCounterEnv string
+var rtm runtime.MemStats
+var v reflect.Value
+var typeOfS reflect.Type
+var err error
 
-func ReportUpdate(pollCounterVar int, reportCounterVar int) error {
+func collectStats(m chan metrics.MetricsContainer) {
 
-	var m metrics.MetricsContainer
-	var rtm runtime.MemStats
-	var v reflect.Value
-	var typeOfS reflect.Type
-	var err error
+	runtime.ReadMemStats(&rtm)
+	mTemp <- m
+	mTemp = metrics.MetricsUpdate(mTemp, rtm)
+	m <- mTemp
+}
 
-	if pollCounterVar >= reportCounterVar {
-		err = errors.New("reportduration needs to be larger than pollduration")
-		return err
+func collectMemStats(m chan metrics.MetricsContainer) {
 
-	}
+	v, _ := mem.VirtualMemory()
+	mTemp <- m
+	mTemp.TotalMemory = v.Total
+	mTemp.FreeMemory = v.Free
+	mTemp.CPUutilization1 = v.UsedPercent
+	m <- mTemp
+}
 
-	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
-	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
+func reportStats(m chan metrics.MetricsContainer, errCh chan<- error) {
 
-	m.PollCount = 0
+	mTemp <- m
+	v = reflect.ValueOf(mTemp)
+	typeOfS = v.Type()
 
-	for {
+	for i := 0; i < v.NumField(); i++ {
 
-		select {
-		case <-pollTicker.C:
-			// update stats
-			runtime.ReadMemStats(&rtm)
-			m = metrics.MetricsUpdate(m, rtm)
-			v = reflect.ValueOf(m)
-			typeOfS = v.Type()
-		case <-reportTicker.C:
-			// send stats to the server
+		url := url.URL{
+			Scheme: "http",
+			Host:   *host,
+		}
+		url.Path += "update/"
 
-			for i := 0; i < v.NumField(); i++ {
+		var metricsObj metrics.Metrics
 
-				url := url.URL{
-					Scheme: "http",
-					Host:   *host,
-				}
-				url.Path += "update/"
-
-				var metricsObj metrics.Metrics
-
-				if v.Field(i).Kind() == reflect.Float64 {
-					metricsObj.ID = typeOfS.Field(i).Name
-					metricsObj.MType = metrics.Gauge
-					value := v.Field(i).Interface().(float64)
-					metricsObj.Value = &value
-					if *key != "" {
-						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
-					}
-
-				} else {
-					metricsObj.ID = typeOfS.Field(i).Name
-					metricsObj.MType = metrics.Counter
-					delta := v.Field(i).Interface().(int64)
-					metricsObj.Delta = &delta
-					if *key != "" {
-						metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
-					}
-				}
-
-				body, err := json.Marshal(metricsObj)
-				if err != nil {
-					log.Printf("Error happened in JSON marshal. Err: %s", err)
-					return err
-				}
-				log.Print(string(body))
-
-				response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
-				if err != nil {
-					log.Printf("Error happened when response received. Err: %s", err)
-					continue
-
-				}
-				err = response.Body.Close()
-				if err != nil {
-					log.Printf("Error happened when response body closed. Err: %s", err)
-					continue
-				}
-				// response status
-				log.Printf("Status code %q\n", response.Status)
+		if v.Field(i).Kind() == reflect.Float64 {
+			metricsObj.ID = typeOfS.Field(i).Name
+			metricsObj.MType = metrics.Gauge
+			value := v.Field(i).Interface().(float64)
+			metricsObj.Value = &value
+			if *key != "" {
+				metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
 			}
 
+		} else {
+			metricsObj.ID = typeOfS.Field(i).Name
+			metricsObj.MType = metrics.Counter
+			delta := v.Field(i).Interface().(int64)
+			metricsObj.Delta = &delta
+			if *key != "" {
+				metricsObj.Hash = metrics.MetricsHash(metricsObj, *key)
+			}
 		}
 
+		body, err := json.Marshal(metricsObj)
+		if err != nil {
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			errCh <- fmt.Errorf("Error happened in JSON marshal. Err: %s", err)
+		}
+		log.Print(string(body))
+
+		response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
+		if err != nil {
+			log.Printf("Error happened when response received. Err: %s", err)
+			continue
+
+		}
+		err = response.Body.Close()
+		if err != nil {
+			log.Printf("Error happened when response body closed. Err: %s", err)
+			continue
+		}
+		// response status
+		log.Printf("Status code %q\n", response.Status)
 	}
+
 }
+
 
 func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
@@ -235,9 +232,34 @@ func main() {
 		log.Fatalf("Error happened in reading report counter variable. Err: %s", err)
 	}
 
-	err = ReportUpdate(pollCounterVar, reportCounterVar)
-	if err != nil {
-		log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
+	if pollCounterVar >= reportCounterVar {
+		err = errors.New("reportduration needs to be larger than pollduration")
+		log.Fatalf("Error happened in setting timer. Err: %s", err)
 	}
+
+	m := make(chan metrics.MetricsContainer)
+	errCh := make(chan error)
+	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
+	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
+
+	m.PollCount = 0
+
+	for {
+
+		select {
+		case <-pollTicker.C:
+			// update stats
+			go collectStats(m)
+			go collectMemStats(m)
+			
+		case <-reportTicker.C:
+			// send stats to the server
+			go reportStats(m, errCh)
+
+	err := <-errCh
+    if err != nil {
+        log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
+    }
+
 
 }
