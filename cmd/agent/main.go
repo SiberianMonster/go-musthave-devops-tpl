@@ -65,7 +65,7 @@ func collectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
-func reportStats(errCh chan<- error) {
+func reportStats() {
 
 	Lm.mu.RLock()
 	defer Lm.mu.RUnlock()
@@ -106,7 +106,6 @@ func reportStats(errCh chan<- error) {
 		body, err := json.Marshal(metricsObj)
 		if err != nil {
 			log.Printf("Error happened in JSON marshal. Err: %s", err)
-			errCh <- fmt.Errorf("error happened in JSON marshal. Err: %s", err)
 		}
 		log.Print(string(body))
 
@@ -259,8 +258,6 @@ func main() {
 		log.Fatalf("Error happened in checking counter variables. Err: %s", err)
 	}
 
-	errCh := make(chan error)
-
 	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
@@ -274,11 +271,7 @@ func main() {
 
 		case <-reportTicker.C:
 			// send stats to the server
-			go reportStats(errCh)
-			err = <-errCh
-			if err != nil {
-				log.Printf("Error happened in ReportUpdate. Err: %s", err)
-			}
+			go reportStats()
 		}
 	}
 
