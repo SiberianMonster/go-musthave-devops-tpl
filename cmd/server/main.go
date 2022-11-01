@@ -5,13 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"flag"
-	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
@@ -55,8 +55,8 @@ func main() {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 
+	config.Key = *key
 	r := mux.NewRouter()
-	handlersWithKey := handlers.WrapperJSONStruct{Key: *key}
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
@@ -74,8 +74,8 @@ func main() {
 
 		}
 
-		handlersWithKey.DB = db
-		handlersWithKey.DBFlag = true
+		config.DB = db
+		config.DBFlag = true
 		defer db.Close()
 
 	} else {
@@ -85,9 +85,10 @@ func main() {
 			}
 			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
 		}
-		handlersWithKey.DBFlag = false
+		config.DBFlag = false
 	}
 
+	handlersWithKey := handlers.NewWrapperJSONStruct()
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
 	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)

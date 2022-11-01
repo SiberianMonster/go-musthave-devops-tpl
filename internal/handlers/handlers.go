@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,9 +20,15 @@ var resp map[string]string
 var testHash string
 
 type WrapperJSONStruct struct {
-	Key    string
-	DB     *sql.DB
-	DBFlag bool
+	key    string
+	dB     *sql.DB
+	dBFlag bool
+}
+
+func NewWrapperJSONStruct() WrapperJSONStruct {
+
+	ws := WrapperJSONStruct{key: config.Key, dB: config.DB, dBFlag: config.DBFlag}
+	return ws
 }
 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
@@ -60,9 +66,9 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if ws.Key != "" {
+	if ws.key != "" {
 
-		testHash = metrics.MetricsHash(updateParams, ws.Key)
+		testHash = metrics.MetricsHash(updateParams, ws.key)
 
 		if testHash != updateParams.Hash {
 			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
@@ -82,7 +88,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 	// не забываем освободить ресурс
 	defer cancel()
 
-	err = storage.RepositoryUpdate(updateParams, ws.DB, ws.DBFlag, ctx)
+	err = storage.RepositoryUpdate(updateParams, ws.dB, ws.dBFlag, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -151,7 +157,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 	// не забываем освободить ресурс
 	defer cancel()
 
-	err = storage.RepositoryUpdate(structParams, ws.DB, ws.DBFlag, ctx)
+	err = storage.RepositoryUpdate(structParams, ws.dB, ws.dBFlag, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "update failed"
@@ -201,7 +207,7 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 	// не забываем освободить ресурс
 	defer cancel()
 
-	err = storage.DBSaveBatch(ws.DB, metricsBatch, ctx)
+	err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
 	if err != nil {
 		rw.WriteHeader(http.StatusNotImplemented)
 		resp["status"] = "batch update failed"
@@ -257,8 +263,8 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	var ok bool
-	if ws.DBFlag {
-		ok = storage.DBCheck(ws.DB, receivedParams.ID, ctx)
+	if ws.dBFlag {
+		ok = storage.DBCheck(ws.dB, receivedParams.ID, ctx)
 
 	} else {
 		_, ok = metrics.Container[receivedParams.ID]
@@ -295,11 +301,11 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 		return
 	}
 
-	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, ws.DB, ws.DBFlag, ctx)
+	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, ws.dB, ws.dBFlag, ctx)
 
-	if ws.Key != "" {
+	if ws.key != "" {
 
-		retrievedMetrics.Hash = metrics.MetricsHash(retrievedMetrics, ws.Key)
+		retrievedMetrics.Hash = metrics.MetricsHash(retrievedMetrics, ws.key)
 
 	}
 	log.Println(retrievedMetrics)
@@ -334,9 +340,9 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 	defer cancel()
 
 	var ok bool
-	if ws.DBFlag {
+	if ws.dBFlag {
 
-		ok = storage.DBCheck(ws.DB, params, ctx)
+		ok = storage.DBCheck(ws.dB, params, ctx)
 
 	} else {
 		_, ok = metrics.Container[params]
@@ -369,7 +375,7 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 
 	var structParams = metrics.Metrics{ID: params, MType: urlPart["name"]}
 
-	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams, ws.DB, ws.DBFlag, ctx)
+	retrievedMetrics, getErr := storage.RepositoryRetrieveString(structParams, ws.dB, ws.dBFlag, ctx)
 
 	if getErr != nil {
 		rw.Header().Set("Content-Type", "application/json")
@@ -408,7 +414,7 @@ func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Requ
 	resp = make(map[string]string)
 	rw.Header().Set("Content-Type", "application/json")
 
-	pingErr := ws.DB.Ping()
+	pingErr := ws.dB.Ping()
 	if pingErr != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 		resp["status"] = "failed connection to the database"

@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	_ "github.com/lib/pq"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"reflect"
@@ -78,38 +78,37 @@ func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx co
 
 	if dbFlag {
 		return DBUpload(storeDB, mp, ctx)
-
-	} else {
-		v := reflect.ValueOf(mp)
-		var delta int64
-
-		fieldName, ok := v.Field(0).Interface().(string)
-		if !ok {
-			err = errors.New("failed metrics retrieval")
-			log.Printf("Error happened in validating metrics name. Err: %s", err)
-			return mp, err
-		}
-		fieldType, ok := v.Field(1).Interface().(string)
-		if !ok {
-			err = errors.New("failed metrics retrieval")
-			log.Printf("Error happened in validating metrics type. Err: %s", err)
-			return mp, err
-		}
-
-		if fieldType == metrics.Counter {
-			if _, ok := metrics.Container[fieldName].(float64); ok {
-				valOld := metrics.Container[fieldName].(float64)
-				delta = int64(valOld)
-			} else {
-				delta = metrics.Container[fieldName].(int64)
-			}
-			mp.Delta = &delta
-		} else {
-			value := metrics.Container[fieldName].(float64)
-			mp.Value = &value
-		}
-		return mp, nil
 	}
+
+	v := reflect.ValueOf(mp)
+	var delta int64
+
+	fieldName, ok := v.Field(0).Interface().(string)
+	if !ok {
+		err = errors.New("failed metrics retrieval")
+		log.Printf("Error happened in validating metrics name. Err: %s", err)
+		return mp, err
+	}
+	fieldType, ok := v.Field(1).Interface().(string)
+	if !ok {
+		err = errors.New("failed metrics retrieval")
+		log.Printf("Error happened in validating metrics type. Err: %s", err)
+		return mp, err
+	}
+
+	if fieldType == metrics.Counter {
+		if _, ok := metrics.Container[fieldName].(float64); ok {
+			valOld := metrics.Container[fieldName].(float64)
+			delta = int64(valOld)
+		} else {
+			delta = metrics.Container[fieldName].(int64)
+		}
+		mp.Delta = &delta
+	} else {
+		value := metrics.Container[fieldName].(float64)
+		mp.Value = &value
+	}
+	return mp, nil
 
 }
 
@@ -129,19 +128,18 @@ func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, 
 		} else {
 			return fmt.Sprintf("%v", mp.Value), err
 		}
-
-	} else {
-		v := reflect.ValueOf(mp)
-		fieldName, ok := v.Field(0).Interface().(string)
-		if !ok {
-			err = errors.New("failed metrics retrieval")
-			log.Printf("Error happened in validating metrics name. Err: %s", err)
-			return requestedValue, err
-		}
-		requestedValue = fmt.Sprintf("%v", metrics.Container[fieldName])
-
-		return requestedValue, nil
 	}
+
+	v := reflect.ValueOf(mp)
+	fieldName, ok := v.Field(0).Interface().(string)
+	if !ok {
+		err = errors.New("failed metrics retrieval")
+		log.Printf("Error happened in validating metrics name. Err: %s", err)
+		return requestedValue, err
+	}
+	requestedValue = fmt.Sprintf("%v", metrics.Container[fieldName])
+	return requestedValue, nil
+
 }
 
 func StaticFileSave(storeFile string) {
