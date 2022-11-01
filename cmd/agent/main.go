@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/shirou/gopsutil/v3/mem"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,10 +17,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
-	"fmt"
-	"github.com/shirou/gopsutil/v3/mem"
 	"sync"
+	"time"
 )
 
 var host, key *string
@@ -29,11 +29,21 @@ var typeOfS reflect.Type
 var err error
 
 type LockMetricsContainer struct {
-    m  metrics.MetricsContainer
-    mu sync.RWMutex
+	m  metrics.MetricsContainer
+	mu sync.RWMutex
 }
 
 var Lm LockMetricsContainer
+
+func counterCheck(pollCounterVar int, reportCounterVar int) error {
+
+	if pollCounterVar >= reportCounterVar {
+		err = errors.New("reportduration needs to be larger than pollduration")
+		log.Printf("Error happened in setting timer. Err: %s", err)
+		return err
+	}
+	return nil
+}
 
 func collectStats() {
 
@@ -116,7 +126,6 @@ func reportStats(errCh chan<- error) {
 	}
 
 }
-
 
 func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
@@ -245,12 +254,13 @@ func main() {
 		log.Fatalf("Error happened in reading report counter variable. Err: %s", err)
 	}
 
-	if pollCounterVar >= reportCounterVar {
-		err = errors.New("reportduration needs to be larger than pollduration")
-		log.Fatalf("Error happened in setting timer. Err: %s", err)
+	err = counterCheck(pollCounterVar, reportCounterVar)
+	if err != nil {
+		log.Fatalf("Error happened in checking counter variables. Err: %s", err)
 	}
+
 	errCh := make(chan error)
-	
+
 	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
@@ -261,20 +271,17 @@ func main() {
 			// update stats
 			go collectStats()
 			go collectMemStats()
-			body, _ := json.Marshal(Lm.m)
-			log.Print(string(body))
 
 		case <-reportTicker.C:
 			// send stats to the server
 			go reportStats(errCh)
-		
+
 		}
 	}
 
 	err = <-errCh
-    if err != nil {
-        log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
-    }
-
+	if err != nil {
+		log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
+	}
 
 }
