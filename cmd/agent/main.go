@@ -277,7 +277,7 @@ func main() {
 			go reportStats(errCh)
 			err = <-errCh
 			if err != nil {
-				log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
+				log.Printf("Error happened in ReportUpdate. Err: %s", err)
 			}
 		}
 	}
