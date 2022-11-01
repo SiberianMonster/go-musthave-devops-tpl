@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"fmt"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/shirou/gopsutil/v3/mem"
