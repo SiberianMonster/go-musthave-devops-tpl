@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestcounterCheck(t *testing.T) {
+func TestCounterCheck(t *testing.T) {
 	type want struct {
 		errvalue error
 	}
@@ -35,7 +35,7 @@ func TestcounterCheck(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := counterCheck(tt.pollduration, tt.reportduration)
+			v := CounterCheck(tt.pollduration, tt.reportduration)
 
 			assert.Equal(t, tt.want.errvalue, v)
 		})

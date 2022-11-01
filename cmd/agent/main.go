@@ -35,7 +35,7 @@ type LockMetricsContainer struct {
 
 var Lm LockMetricsContainer
 
-func counterCheck(pollCounterVar int, reportCounterVar int) error {
+func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 
 	if pollCounterVar >= reportCounterVar {
 		err = errors.New("reportduration needs to be larger than pollduration")
@@ -106,7 +106,7 @@ func reportStats(errCh chan<- error) {
 		body, err := json.Marshal(metricsObj)
 		if err != nil {
 			log.Printf("Error happened in JSON marshal. Err: %s", err)
-			errCh <- fmt.Errorf("Error happened in JSON marshal. Err: %s", err)
+			errCh <- fmt.Errorf("error happened in JSON marshal. Err: %s", err)
 		}
 		log.Print(string(body))
 
@@ -254,7 +254,7 @@ func main() {
 		log.Fatalf("Error happened in reading report counter variable. Err: %s", err)
 	}
 
-	err = counterCheck(pollCounterVar, reportCounterVar)
+	err = CounterCheck(pollCounterVar, reportCounterVar)
 	if err != nil {
 		log.Fatalf("Error happened in checking counter variables. Err: %s", err)
 	}
@@ -275,13 +275,11 @@ func main() {
 		case <-reportTicker.C:
 			// send stats to the server
 			go reportStats(errCh)
-
+			err = <-errCh
+			if err != nil {
+				log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
+			}
 		}
-	}
-
-	err = <-errCh
-	if err != nil {
-		log.Fatalf("Error happened in ReportUpdate. Err: %s", err)
 	}
 
 }
