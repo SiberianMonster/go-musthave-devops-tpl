@@ -37,7 +37,7 @@ func TestRouter(t *testing.T) {
 
 	r := mux.NewRouter()
 
-	handlersWithKey := handlers.WrapperJSONStruct{Key: ""}
+	handlersWithKey := handlers.NewWrapperJSONStruct()
 
 	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
 	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
