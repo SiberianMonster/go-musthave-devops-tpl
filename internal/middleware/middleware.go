@@ -3,9 +3,10 @@ package middleware
 import (
 	"github.com/klauspost/compress/gzip"
 	//"compress/gzip"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"net/http"
 	"strings"
+
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
 func GzipHandler(h http.Handler) http.Handler {

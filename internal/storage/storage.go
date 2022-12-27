@@ -7,13 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	_ "github.com/lib/pq"
 )
 
 var err error
@@ -39,7 +40,7 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx cont
 	var newValue float64
 	var newDelta int64
 	var oldDelta int64
-	
+
 	fieldName := v.Field(0).Interface().(string)
 	fieldType := v.Field(1).Interface().(string)
 

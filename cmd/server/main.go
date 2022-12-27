@@ -5,13 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
-	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"net/http/pprof"
@@ -22,6 +15,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
 var err error
@@ -99,7 +99,6 @@ func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
 		storage.StaticFileSave(*storeFile)
 	}
 }
-
 
 func main() {
 

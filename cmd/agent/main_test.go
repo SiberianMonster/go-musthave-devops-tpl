@@ -2,8 +2,9 @@ package main
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCounterCheck(t *testing.T) {
@@ -81,10 +82,10 @@ func TestReportUpdateBatch(t *testing.T) {
 func TestCollectStats(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name string
 	}{
 		{
-			name:           "trial run",
+			name: "trial run",
 		},
 	}
 	for _, tt := range tests {
@@ -98,10 +99,10 @@ func TestCollectStats(t *testing.T) {
 func TestCollectMemStats(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name string
 	}{
 		{
-			name:           "trial run",
+			name: "trial run",
 		},
 	}
 	for _, tt := range tests {
@@ -115,10 +116,10 @@ func TestCollectMemStats(t *testing.T) {
 func TestReportStats(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name string
 	}{
 		{
-			name:           "trial run",
+			name: "trial run",
 		},
 	}
 	for _, tt := range tests {

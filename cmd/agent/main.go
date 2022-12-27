@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
-	"github.com/shirou/gopsutil/v3/mem"
 	"log"
 	"net/http"
 	"net/url"
@@ -18,6 +15,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 var host, key *string

@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 var err error
@@ -220,7 +221,6 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 	defer cancel()
 
 	if ws.dB != nil {
-		err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
 		err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
 		if err != nil {
 			rw.WriteHeader(http.StatusNotImplemented)

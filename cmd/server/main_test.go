@@ -3,16 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/middleware"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func testRequest(t *testing.T, ts *httptest.Server, path string, metricsObj metrics.Metrics) (*http.Response, string) {
@@ -75,14 +76,13 @@ func TestRouter(t *testing.T) {
 
 }
 
-
 func TestInitializeRouter(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name string
 	}{
 		{
-			name:           "trial run",
+			name: "trial run",
 		},
 	}
 	for _, tt := range tests {
@@ -94,18 +94,17 @@ func TestInitializeRouter(t *testing.T) {
 }
 
 func TestParseStoreInterval(t *testing.T) {
-	
+
 	tests := []struct {
 		name           string
-		storeParameter   string
-		want int
+		storeParameter string
+		want           int
 	}{
 		{
 			name:           "trial run",
 			storeParameter: "3m",
-			want: 3,
+			want:           3,
 		},
-		
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,18 +115,17 @@ func TestParseStoreInterval(t *testing.T) {
 }
 
 func TestParseRestoreValue(t *testing.T) {
-	
+
 	tests := []struct {
-		name           string
-		restore   string
-		want bool
+		name    string
+		restore string
+		want    bool
 	}{
 		{
-			name:           "trial run",
+			name:    "trial run",
 			restore: "true",
-			want: true,
+			want:    true,
 		},
-		
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,19 +136,18 @@ func TestParseRestoreValue(t *testing.T) {
 }
 
 func TestShutdownGracefully(t *testing.T) {
-	
+
 	tests := []struct {
-		name           string
-		srv		*http.Server
+		name      string
+		srv       *http.Server
 		storeFile string
 		connStr   string
 	}{
 		{
-			name:           "trial run",
+			name:      "trial run",
 			storeFile: "/tmp/devops-metrics-db.json",
 			connStr:   "",
 		},
-		
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -2,10 +2,11 @@ package metrics
 
 import (
 	"fmt"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"log"
 	"math/rand"
 	"runtime"
+
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
 var Container map[string]interface{}
