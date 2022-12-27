@@ -74,3 +74,88 @@ func TestRouter(t *testing.T) {
 	assert.Equal(t, `{"status":"invalid type"}`, body)
 
 }
+
+
+func TestInitializeRouter(t *testing.T) {
+
+	tests := []struct {
+		name           string
+	}{
+		{
+			name:           "trial run",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			InitializeRouter()
+
+		})
+	}
+}
+
+func TestParseStoreInterval(t *testing.T) {
+	
+	tests := []struct {
+		name           string
+		storeParameter   string
+		want int
+	}{
+		{
+			name:           "trial run",
+			storeParameter: "3m",
+			want: 3,
+		},
+		
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := ParseStoreInterval(&tt.storeParameter)
+			assert.Equal(t, tt.want, v)
+		})
+	}
+}
+
+func TestParseRestoreValue(t *testing.T) {
+	
+	tests := []struct {
+		name           string
+		restore   string
+		want bool
+	}{
+		{
+			name:           "trial run",
+			restore: "true",
+			want: true,
+		},
+		
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := ParseRestoreValue(&tt.restore)
+			assert.Equal(t, tt.want, v)
+		})
+	}
+}
+
+func TestShutdownGracefully(t *testing.T) {
+	
+	tests := []struct {
+		name           string
+		srv		*http.Server
+		storeFile string
+		connStr   string
+	}{
+		{
+			name:           "trial run",
+			storeFile: "/tmp/devops-metrics-db.json",
+			connStr:   "",
+		},
+		
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.srv = &http.Server{}
+			ShutdownGracefully(tt.srv, storeFile, connStr)
+		})
+	}
+}

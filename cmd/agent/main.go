@@ -44,7 +44,7 @@ func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 	return nil
 }
 
-func collectStats() {
+func CollectStats() {
 
 	log.Println("Collecting stats")
 	Lm.mu.Lock()
@@ -53,7 +53,7 @@ func collectStats() {
 	Lm.m = metrics.MetricsUpdate(Lm.m, rtm)
 }
 
-func collectMemStats() {
+func CollectMemStats() {
 
 	log.Println("Collecting mem stats")
 	Lm.mu.Lock()
@@ -64,7 +64,7 @@ func collectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
-func reportStats() {
+func ReportStats() {
 
 	Lm.mu.RLock()
 	defer Lm.mu.RUnlock()
@@ -265,12 +265,12 @@ func main() {
 		select {
 		case <-pollTicker.C:
 			// update stats
-			go collectStats()
-			go collectMemStats()
+			go CollectStats()
+			go CollectMemStats()
 
 		case <-reportTicker.C:
 			// send stats to the server
-			go reportStats()
+			go ReportStats()
 		}
 	}
 

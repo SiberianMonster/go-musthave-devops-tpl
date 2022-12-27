@@ -14,12 +14,14 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
 )
 
 var err error
@@ -40,27 +42,78 @@ func init() {
 
 }
 
-func main() {
+func InitializeRouter() *mux.Router {
 
-	flag.Parse()
+	r := mux.NewRouter()
 
-	restoreValue, err := strconv.ParseBool(*restore)
-	if err != nil {
-		log.Fatalf("Error happened in reading restoreValue variable. Err: %s", err)
-	}
+	handlersWithKey := handlers.NewWrapperJSONStruct()
+	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
+	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
+	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
+	r.HandleFunc("/value/{type}/{name}", handlersWithKey.ValueStringHandler)
+	r.HandleFunc("/ping", handlersWithKey.PostgresHandler)
+	r.HandleFunc("/updates/", handlersWithKey.UpdateBatchJSONHandler)
+
+	r.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	r.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	r.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	r.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+	r.Handle("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
+	r.Handle("/debug/pprof/{cmd}", http.HandlerFunc(pprof.Index)) // special handling for Gorilla mux
+
+	r.HandleFunc("/", handlersWithKey.GenericHandler)
+	r.Use(middleware.GzipHandler)
+	return r
+}
+
+func ParseStoreInterval(storeParameter *string) int {
 
 	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
 	storeInt, err := strconv.Atoi(storeInterval)
 	if err != nil {
 		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
 	}
+	return storeInt
+}
+
+func ParseRestoreValue(restore *string) bool {
+
+	restoreValue, err := strconv.ParseBool(*restore)
+	if err != nil {
+		log.Fatalf("Error happened in reading restoreValue variable. Err: %s", err)
+	}
+	return restoreValue
+}
+
+func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
+
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)
+	defer shutdownRelease()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	log.Println("Graceful shutdown complete.")
+
+	if len(*storeFile) > 0 && len(*connStr) == 0 {
+		storage.StaticFileSave(*storeFile)
+	}
+}
+
+
+func main() {
+
+	flag.Parse()
+
+	restoreValue := ParseRestoreValue(restore)
+
+	storeInt := ParseStoreInterval(storeParameter)
 
 	config.Key = *key
-	r := mux.NewRouter()
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
 		db, err = sql.Open("postgres", *connStr)
@@ -88,16 +141,7 @@ func main() {
 		config.DBFlag = false
 	}
 
-	handlersWithKey := handlers.NewWrapperJSONStruct()
-	r.HandleFunc("/update/", handlersWithKey.UpdateJSONHandler)
-	r.HandleFunc("/value/", handlersWithKey.ValueJSONHandler)
-	r.HandleFunc("/update/{type}/{name}/{value}", handlersWithKey.UpdateStringHandler)
-	r.HandleFunc("/value/{type}/{name}", handlersWithKey.ValueStringHandler)
-	r.HandleFunc("/ping", handlersWithKey.PostgresHandler)
-	r.HandleFunc("/updates/", handlersWithKey.UpdateBatchJSONHandler)
-
-	r.HandleFunc("/", handlersWithKey.GenericHandler)
-	r.Use(middleware.GzipHandler)
+	r := InitializeRouter()
 
 	srv := &http.Server{
 		Handler: r,
@@ -115,16 +159,6 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 	<-sigChan
 
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)
-	defer shutdownRelease()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
-	log.Println("Graceful shutdown complete.")
-
-	if len(*storeFile) > 0 && len(*connStr) == 0 {
-		storage.StaticFileSave(*storeFile)
-	}
+	ShutdownGracefully(srv, storeFile, connStr)
 
 }

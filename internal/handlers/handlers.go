@@ -38,11 +38,23 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 	rw.Header().Set("Connection", "close")
 	var updateParams metrics.Metrics
 
+	if r.Body == nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		resp["status"] = "missing json body"
+		jsonResp, err := json.Marshal(resp)
+		if err != nil {
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			return
+		}
+		rw.Write(jsonResp)
+		return
+	}
+
 	err := json.NewDecoder(r.Body).Decode(&updateParams)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
-		resp["status"] = "missing json body"
+		resp["status"] = "wrong metrics format"
 		jsonResp, err := json.Marshal(resp)
 		if err != nil {
 			log.Printf("Error happened in JSON marshal. Err: %s", err)
@@ -207,17 +219,20 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 	// не забываем освободить ресурс
 	defer cancel()
 
-	err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
-	if err != nil {
-		rw.WriteHeader(http.StatusNotImplemented)
-		resp["status"] = "batch update failed"
-		jsonResp, err := json.Marshal(resp)
+	if ws.dB != nil {
+		err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
+		err = storage.DBSaveBatch(ws.dB, metricsBatch, ctx)
 		if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
+			rw.WriteHeader(http.StatusNotImplemented)
+			resp["status"] = "batch update failed"
+			jsonResp, err := json.Marshal(resp)
+			if err != nil {
+				log.Printf("Error happened in JSON marshal. Err: %s", err)
+				return
+			}
+			rw.Write(jsonResp)
 			return
 		}
-		rw.Write(jsonResp)
-		return
 	}
 	s, err := json.Marshal(metrics.Container)
 	if err != nil {

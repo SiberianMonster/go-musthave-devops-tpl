@@ -1,7 +1,8 @@
 package middleware
 
 import (
-	"compress/gzip"
+	"github.com/klauspost/compress/gzip"
+	//"compress/gzip"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 	"net/http"
 	"strings"

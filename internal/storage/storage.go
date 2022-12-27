@@ -39,13 +39,16 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx cont
 	var newValue float64
 	var newDelta int64
 	var oldDelta int64
+	
 	fieldName := v.Field(0).Interface().(string)
 	fieldType := v.Field(1).Interface().(string)
 
 	if fieldType != metrics.Counter {
 		newValue = *mp.Value
 		log.Printf("New gauge %f\n", newValue)
-		metrics.Container[fieldName] = newValue
+		if metrics.Container != nil {
+			metrics.Container[fieldName] = newValue
+		}
 		return nil
 	}
 	newDelta = *mp.Delta
