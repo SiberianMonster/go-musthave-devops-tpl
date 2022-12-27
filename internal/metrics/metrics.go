@@ -1,3 +1,6 @@
+// Metrics package contains pre-defined structs for system metrics storage
+//
+//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics
 package metrics
 
 import (
@@ -9,13 +12,16 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
+// Container object allows collection of dynamic system metrics
 var Container map[string]interface{}
 
+// System metrics may belong to either counter or gauge type where "counter" is always an integer and "gauge" is a float value.
 const (
 	Counter = "counter"
 	Gauge   = "gauge"
 )
 
+// Metrics struct is used for storing system metrics and also for exchanging data between the data collecting agent and the server
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -24,6 +30,7 @@ type Metrics struct {
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
+// MetricsContainer struct has all the system metrics available from the runtime.ReadMemStats and the update counter.
 type MetricsContainer struct {
 	PollCount int64
 	RandomValue,
@@ -59,6 +66,7 @@ type MetricsContainer struct {
 	NumGC float64
 }
 
+// MetricsUpdate function is used to populate MetricsContainer with the system metrics from runtime.ReadMemStats.
 func MetricsUpdate(m MetricsContainer, rtm runtime.MemStats) MetricsContainer {
 
 	m.Alloc = float64(rtm.Alloc)
@@ -94,6 +102,7 @@ func MetricsUpdate(m MetricsContainer, rtm runtime.MemStats) MetricsContainer {
 
 }
 
+// MetricsHash function allows to hash the Metrics struct with system metrics using http.Hash algorythm.
 func MetricsHash(m Metrics, key string) string {
 
 	var strHash string

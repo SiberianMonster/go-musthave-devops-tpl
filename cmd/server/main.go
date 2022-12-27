@@ -1,3 +1,6 @@
+// Server module launches the web server for collecting system metrics and their storage in an SQL Database / json-file
+//
+//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server
 package main
 
 import (
@@ -42,6 +45,7 @@ func init() {
 
 }
 
+//InitializeRouter function returns Gorilla mux router with the endpoints that allow reception / retrieval of system metrics
 func InitializeRouter() *mux.Router {
 
 	r := mux.NewRouter()
@@ -66,6 +70,7 @@ func InitializeRouter() *mux.Router {
 	return r
 }
 
+//ParseStoreInterval function does the procesing of storeinterval input variable 
 func ParseStoreInterval(storeParameter *string) int {
 
 	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
@@ -76,6 +81,7 @@ func ParseStoreInterval(storeParameter *string) int {
 	return storeInt
 }
 
+//ParseRestoreValue function does the procesing of restore input variable 
 func ParseRestoreValue(restore *string) bool {
 
 	restoreValue, err := strconv.ParseBool(*restore)
@@ -85,6 +91,7 @@ func ParseRestoreValue(restore *string) bool {
 	return restoreValue
 }
 
+//ShutdownGracefully handles server shutdown and information saving
 func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
 
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)

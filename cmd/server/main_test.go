@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
@@ -155,4 +156,39 @@ func TestShutdownGracefully(t *testing.T) {
 			ShutdownGracefully(tt.srv, storeFile, connStr)
 		})
 	}
+}
+
+func ExampleInitializeRouter() {
+
+	r := InitializeRouter()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	floatValue := 2.0
+
+	metricsObj := metrics.Metrics{
+		ID:    "Alloc",
+		MType: "gauge",
+		Value: &floatValue,
+	}
+	body, _ := json.Marshal(metricsObj)
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/update/", bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Error happened in creating request. Err: %s", err)
+		return
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error happened in posting request. Err: %s", err)
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error happened in reading response body. Err: %s", err)
+		return
+	}
+	defer resp.Body.Close()
+	log.Print(respBody)
+
 }

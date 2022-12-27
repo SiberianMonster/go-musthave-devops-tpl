@@ -1,3 +1,6 @@
+// Storage package contains functions for storing system metrics in a SQL database or json-file
+//
+//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage
 package storage
 
 import (
@@ -19,6 +22,8 @@ import (
 
 var err error
 
+// RepositoryUpdate function saves received system metrics to a SQL database if it is enabled
+// or updates metrics container that is later exported to the json-file
 func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) error {
 
 	smp, err := json.Marshal(mp)
@@ -78,6 +83,8 @@ func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx cont
 
 }
 
+// RepositoryRetrieve function gets metric values from the storage upon request
+//and returns it in a struct format
 func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) (metrics.Metrics, error) {
 
 	if dbFlag {
@@ -116,6 +123,8 @@ func RepositoryRetrieve(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx co
 
 }
 
+// RepositoryRetrieve function gets metric values from the storage upon request
+//and returns it in a string format
 func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) (string, error) {
 
 	var requestedValue string
@@ -146,6 +155,7 @@ func RepositoryRetrieveString(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, 
 
 }
 
+// StaticFileSave function saves received system metrics to json-file
 func StaticFileSave(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE, 0777)
@@ -175,6 +185,7 @@ func StaticFileSave(storeFile string) {
 
 }
 
+// StaticFileUpload function uploads stored system metrics from the json-file
 func StaticFileUpload(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
@@ -200,6 +211,7 @@ func StaticFileUpload(storeFile string) {
 
 }
 
+// DBSave function performs the operation of inserting new system metrics to a SQL database with a query 
 func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) error {
 
 	_, err := storeDB.ExecContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3);",
@@ -215,6 +227,7 @@ func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) er
 	return nil
 }
 
+// DBSaveBatch function performs the operation of inserting a batch of system metrics to a SQL database with a transaction 
 func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Context) error {
 
 	// шаг 1 — объявляем транзакцию
@@ -247,6 +260,7 @@ func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Cont
 	return tx.Commit()
 }
 
+// DBUpload function performs the operation of retrieving system metrics from a SQL database with a query 
 func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) (metrics.Metrics, error) {
 
 	var uploadedValue *float64
@@ -279,6 +293,7 @@ func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) 
 	return metricsObj, nil
 }
 
+// DBCheck function performs the operation of checking if a system metric was previously recorded to a SQL database with a query
 func DBCheck(storeDB *sql.DB, name string, ctx context.Context) bool {
 
 	var ok bool
@@ -290,6 +305,7 @@ func DBCheck(storeDB *sql.DB, name string, ctx context.Context) bool {
 	return ok
 }
 
+// ContainerUpdate function enables saving received system metrics to a json-file constantly at regular intervals
 func ContainerUpdate(storeInt int, storeFile string, storeDB *sql.DB, storeParameter string) {
 
 	var ticker *time.Ticker

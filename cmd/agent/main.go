@@ -1,3 +1,6 @@
+// Agent module enables repetitive collection of system metrics and posts the collected stats to a server
+//
+//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/cmd/agent
 package main
 
 import (
@@ -8,6 +11,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	_ "net/http/pprof" 
 	"net/url"
 	"reflect"
 	"runtime"
@@ -28,6 +32,8 @@ var v reflect.Value
 var typeOfS reflect.Type
 var err error
 
+//LockMetricsContainer is a struct that serves to store and transmit system metrics.
+//It contains RMutex attribute to avoid data corruption
 type LockMetricsContainer struct {
 	m  metrics.MetricsContainer
 	mu sync.RWMutex
@@ -35,6 +41,8 @@ type LockMetricsContainer struct {
 
 var Lm LockMetricsContainer
 
+//CounterCheck function controls variables used as intervals for system metrics collection and posting.
+//The function checks that the posting interval is always larger than the collection interval
 func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 
 	if pollCounterVar >= reportCounterVar {
@@ -45,6 +53,7 @@ func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 	return nil
 }
 
+//CounterCheck function is used to collect system metrics from runtime.ReadMemStats.
 func CollectStats() {
 
 	log.Println("Collecting stats")
@@ -54,6 +63,7 @@ func CollectStats() {
 	Lm.m = metrics.MetricsUpdate(Lm.m, rtm)
 }
 
+//CounterCheck function collects additional system metrics with mem.VirtualMemory.
 func CollectMemStats() {
 
 	log.Println("Collecting mem stats")
@@ -65,6 +75,7 @@ func CollectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
+//ReportStats writes collected each system metric as a request body and posts them to the server.
 func ReportStats() {
 
 	Lm.mu.RLock()
@@ -126,6 +137,8 @@ func ReportStats() {
 
 }
 
+//ReportUpdateBatch allows to send all collected metrics in a single http request. 
+//All the metrics are appended to a single slice of metrics objects
 func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
 	var m metrics.MetricsContainer

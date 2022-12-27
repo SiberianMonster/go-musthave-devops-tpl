@@ -129,3 +129,21 @@ func TestReportStats(t *testing.T) {
 		})
 	}
 }
+
+func ExampleCollectStats() {
+
+	CollectStats()
+
+}
+
+func ExampleCollectMemStats() {
+
+	CollectMemStats()
+
+}
+
+func ExampleReportStats() {
+
+	ReportStats()
+
+}

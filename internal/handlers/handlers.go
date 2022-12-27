@@ -1,3 +1,6 @@
+// Handlers package contains endpoints handlers for the Server module
+//
+//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers
 package handlers
 
 import (
@@ -20,18 +23,21 @@ var err error
 var resp map[string]string
 var testHash string
 
+// WrapperJSONStruct enables using SQL database instanse and the hashing option for endpoint handlers
 type WrapperJSONStruct struct {
 	key    string
 	dB     *sql.DB
 	dBFlag bool
 }
 
+// NewWrapperJSONStruct function returns WrapperJSONStruct object
 func NewWrapperJSONStruct() WrapperJSONStruct {
 
 	ws := WrapperJSONStruct{key: config.Key, dB: config.DB, dBFlag: config.DBFlag}
 	return ws
 }
 
+// UpdateJSONHandler enables reveiving new system metrics in json-encoded request body 
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -125,6 +131,7 @@ func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Re
 
 }
 
+// UpdateStringHandler enables reveiving new system metrics in url-encoded format
 func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -193,6 +200,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 
 }
 
+// UpdateBatchJSONHandler enables reveiving multiple system metrics objects in single json-encoded request body 
 func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -251,6 +259,7 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 
 }
 
+// ValueJSONHandler enables returning stored system metrics objects upon request with json-encoded body 
 func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -340,6 +349,7 @@ func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Req
 	json.NewEncoder(rw).Encode(retrievedMetrics)
 }
 
+// ValueStringHandler enables returning stored system metrics objects upon request in url-encoded format
 func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -411,6 +421,7 @@ func (ws WrapperJSONStruct) ValueStringHandler(rw http.ResponseWriter, r *http.R
 
 }
 
+// GenericHandler handles request to the server with no specific endpoint
 func (ws WrapperJSONStruct) GenericHandler(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	log.Printf("Got to generic endpoint")
@@ -424,6 +435,7 @@ func (ws WrapperJSONStruct) GenericHandler(rw http.ResponseWriter, r *http.Reque
 	rw.Write([]byte(string(s)))
 }
 
+// PostgresHandler sends ping requests to the database to check existing connection
 func (ws WrapperJSONStruct) PostgresHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
