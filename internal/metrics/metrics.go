@@ -1,6 +1,6 @@
-// Metrics package contains pre-defined structs for system metrics storage
+// Metrics package contains pre-defined structs for system metrics storage.
 //
-//Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics
+// Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics
 package metrics
 
 import (
@@ -12,7 +12,7 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
-// Container object allows collection of dynamic system metrics
+// Container object allows collection of dynamic system metrics.
 var Container map[string]interface{}
 
 // System metrics may belong to either counter or gauge type where "counter" is always an integer and "gauge" is a float value.
@@ -21,7 +21,7 @@ const (
 	Gauge   = "gauge"
 )
 
-// Metrics struct is used for storing system metrics and also for exchanging data between the data collecting agent and the server
+// Metrics struct is used for storing system metrics and also for exchanging data between the data collecting agent and the server.
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
