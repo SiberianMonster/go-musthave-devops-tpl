@@ -37,8 +37,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			if foundExit {
 			pass.Reportf(node.Pos(), "os.Exit used in the code")
 			}
-		})
 		return
+		})
 	}
 
 	return nil, nil
