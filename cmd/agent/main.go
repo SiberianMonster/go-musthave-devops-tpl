@@ -25,7 +25,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-var host, key *string
+var host, key, buildVersion, buildDate, buildCommit *string
 var pollCounterEnv, reportCounterEnv string
 var rtm runtime.MemStats
 var v reflect.Value
@@ -250,6 +250,12 @@ func init() {
 	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
 	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
+	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
+	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
+	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
+	log.Printf("Build Version: %s", buildVersion)
+	log.Printf("Build Date: %s", buildDate)
+	log.Printf("Build Commit: %s", buildCommit)
 }
 
 func main() {

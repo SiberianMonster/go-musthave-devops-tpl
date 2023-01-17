@@ -28,7 +28,7 @@ import (
 )
 
 var err error
-var host, storeFile, restore, key, connStr, storeParameter *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit *string
 var storeInterval string
 var db *sql.DB
 
@@ -42,6 +42,12 @@ func init() {
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
+	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
+	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
+	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
+	log.Printf("Build Version: %s", buildVersion)
+	log.Printf("Build Date: %s", buildDate)
+	log.Printf("Build Commit: %s", buildCommit)
 
 }
 
