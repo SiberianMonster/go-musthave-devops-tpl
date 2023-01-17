@@ -4,8 +4,7 @@
 package exitlint
 
 import (
-	"errors"
-
+	"go/ast"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -18,7 +17,7 @@ var ExitCheckAnalyzer = &analysis.Analyzer{
 func run(pass *analysis.Pass) (interface{}, error) {
 	foundExit := false
 	for _, file := range pass.Files {
-		ast.Inspect(file, func(n ast.Node) bool {
+		ast.Inspect(file, func(node ast.Node) bool {
 			switch n := node.(type) {
 			case *ast.GoStmt:
 				switch fn := n.Call.Fun.(type) {
@@ -39,6 +38,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			pass.Reportf(node.Pos(), "os.Exit used in the code")
 			}
 		})
+		return
 	}
 
 	return nil, nil

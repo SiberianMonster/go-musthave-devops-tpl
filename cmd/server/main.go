@@ -45,9 +45,9 @@ func init() {
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
 	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
-	log.Printf("Build Version: %s", buildVersion)
-	log.Printf("Build Date: %s", buildDate)
-	log.Printf("Build Commit: %s", buildCommit)
+	log.Printf("Build Version: %s", &buildVersion)
+	log.Printf("Build Date: %s", &buildDate)
+	log.Printf("Build Commit: %s", &buildCommit)
 
 }
 
