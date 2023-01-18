@@ -9,6 +9,7 @@ import (
     "path/filepath"
 
 	"golang.org/x/tools/go/analysis"
+	"go/ast"
     "golang.org/x/tools/go/analysis/multichecker"
     "golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
@@ -52,13 +53,49 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/staticcheck"
-	"github.com/SiberianMonster/go-musthave-devops-tpl/exitlint"
-
 
 )
 
+
+var ExitCheckAnalyzer = &analysis.Analyzer{
+    Name: "exitcheck",
+    Doc:  "check for os.Exit use",
+    Run:  run,
+}
+
+func run(pass *analysis.Pass) (interface{}, error) {
+	foundExit := false
+	for _, file := range pass.Files {
+		ast.Inspect(file, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.GoStmt:
+				switch fn := n.Call.Fun.(type) {
+				case *ast.FuncLit:
+					ast.Inspect(fn, func(node ast.Node) bool {
+						switch n := node.(type) {
+						case *ast.Ident:
+							if n.Name == "os.Exit" {
+								foundExit = true
+							return false
+							}
+						}
+						return true
+					})
+				}
+			}
+			if foundExit {
+			pass.Reportf(node.Pos(), "os.Exit used in the code")
+			}
+		return true
+		})
+	}
+
+	return nil, nil
+}
+
+
 // Config — имя файла конфигурации.
-const Config = `config.json`
+const Config = `/config.json`
 
 // ConfigData описывает структуру файла конфигурации.
 type ConfigData struct {
@@ -66,10 +103,8 @@ type ConfigData struct {
 }
 
 func main() {
-    appfile, err := os.Executable()
-    if err != nil {
-        panic(err)
-    }
+	appfile, err := os.Executable()
+    
     data, err := os.ReadFile(filepath.Join(filepath.Dir(appfile), Config))
     if err != nil {
         panic(err)
@@ -79,7 +114,7 @@ func main() {
         panic(err)
     }
     mychecks := []*analysis.Analyzer{
-        exitlint.ExitCheckAnalyzer,
+        ExitCheckAnalyzer,
         asmdecl.Analyzer,
 		assign.Analyzer,
 		atomic.Analyzer,
