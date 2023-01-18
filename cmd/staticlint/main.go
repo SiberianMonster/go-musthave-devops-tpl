@@ -54,6 +54,8 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/staticcheck"
+	"github.com/kkHAIKE/contextcheck"
+	"github.com/Antonboom/errname/pkg/analyzer"
 
 )
 
@@ -157,6 +159,8 @@ func main() {
         unusedresult.Analyzer,
 		unusedwrite.Analyzer,
         usesgenerics.Analyzer,
+		contextcheck.NewAnalyzer(contextcheck.Configuration{}),
+		analyzer.New(),
     }
     checks := make(map[string]bool)
     for _, v := range cfg.Staticcheck {
