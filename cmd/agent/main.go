@@ -75,6 +75,31 @@ func CollectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
+// CounterCheck function collects additional system metrics with mem.VirtualMemory.
+func SendMemStats(metricsObj metrics.Metrics, urlString string) {
+
+	body, err := json.Marshal(metricsObj)
+	if err != nil {
+			log.Printf("Error happened in JSON marshal. Err: %s", err)
+	}
+	log.Print(string(body))
+
+	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
+	if err != nil {
+		log.Printf("Error happened when response received. Err: %s", err)
+		return
+
+	}
+	err = response.Body.Close()
+	if err != nil {
+		log.Printf("Error happened when response body closed. Err: %s", err)
+		return
+	}
+	// response status
+	log.Printf("Status code %q\n", response.Status)
+}
+
+
 // ReportStats writes collected each system metric as a request body and posts them to the server.
 func ReportStats() {
 
@@ -114,25 +139,8 @@ func ReportStats() {
 			}
 		}
 
-		body, err := json.Marshal(metricsObj)
-		if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
-		}
-		log.Print(string(body))
+		SendMemStats(metricsObj, url.String())
 
-		response, err := http.Post(url.String(), "application/json", bytes.NewBuffer(body))
-		if err != nil {
-			log.Printf("Error happened when response received. Err: %s", err)
-			continue
-
-		}
-		err = response.Body.Close()
-		if err != nil {
-			log.Printf("Error happened when response body closed. Err: %s", err)
-			continue
-		}
-		// response status
-		log.Printf("Status code %q\n", response.Status)
 	}
 
 }

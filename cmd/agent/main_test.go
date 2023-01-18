@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 )
 
 func TestCounterCheck(t *testing.T) {
@@ -125,6 +126,45 @@ func TestReportStats(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ReportStats()
+
+		})
+	}
+}
+
+func TestSendMemStats(t *testing.T) {
+
+	tests := []struct {
+		name           string
+		urlString string
+	}{
+		{
+			name: "trial run",
+			urlString: "",
+		},
+	}
+	for _, tt := range tests {
+		metricsObj:= metrics.Metrics{}
+		t.Run(tt.name, func(t *testing.T) {
+			SendMemStats(metricsObj, tt.urlString)
+
+		})
+	}
+}
+
+func TestSendEmptyStats(t *testing.T) {
+
+	tests := []struct {
+		name           string
+		urlString string
+	}{
+		{
+			name: "run with wrong object",
+			urlString: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SendMemStats("", tt.urlString)
 
 		})
 	}
