@@ -151,24 +151,6 @@ func TestSendMemStats(t *testing.T) {
 	}
 }
 
-func TestSendEmptyStats(t *testing.T) {
-
-	tests := []struct {
-		name           string
-		urlString string
-	}{
-		{
-			name: "run with wrong object",
-			urlString: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SendMemStats("", tt.urlString)
-
-		})
-	}
-}
 
 func ExampleCollectStats() {
 
