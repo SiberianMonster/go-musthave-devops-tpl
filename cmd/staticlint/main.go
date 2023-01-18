@@ -1,6 +1,7 @@
 // Multichecker module is a tool for static analysis of Go programs.
 //
 // Available at https://github.com/SiberianMonster/go-musthave-devops-tpl/cmd/staticlint
+// For checking the code launch go run staticlint/main.go -- [package_folder]/[package].go
 package main
 
 import (
@@ -103,7 +104,7 @@ type ConfigData struct {
 }
 
 func main() {
-	appfile, err := os.Executable()
+	appfile, err := os.Getwd()
     
     data, err := os.ReadFile(filepath.Join(filepath.Dir(appfile), Config))
     if err != nil {
