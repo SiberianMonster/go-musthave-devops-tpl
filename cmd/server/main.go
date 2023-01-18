@@ -27,7 +27,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var err error
 var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit *string
 var storeInterval string
 var db *sql.DB
@@ -128,11 +127,12 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 		// не забываем освободить ресурс
 		defer cancel()
+		var err error
 		db, err = sql.Open("postgres", *connStr)
 		if err != nil {
 			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
 		}
-		_, err := db.ExecContext(ctx,
+		_, err = db.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
 			log.Fatalf("Error happened when creating sql table. Err: %s", err)
