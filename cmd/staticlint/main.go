@@ -6,13 +6,15 @@ package main
 
 import (
 	"encoding/json"
-    "os"
-    "path/filepath"
+	"os"
+	"path/filepath"
 
-	"golang.org/x/tools/go/analysis"
+	"github.com/Antonboom/errname/pkg/analyzer"
+	"github.com/kkHAIKE/contextcheck"
 	"go/ast"
-    "golang.org/x/tools/go/analysis/multichecker"
-    "golang.org/x/tools/go/analysis/passes/asmdecl"
+	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/multichecker"
+	"golang.org/x/tools/go/analysis/passes/asmdecl"
 	"golang.org/x/tools/go/analysis/passes/assign"
 	"golang.org/x/tools/go/analysis/passes/atomic"
 	"golang.org/x/tools/go/analysis/passes/atomicalign"
@@ -54,16 +56,12 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/staticcheck"
-	"github.com/kkHAIKE/contextcheck"
-	"github.com/Antonboom/errname/pkg/analyzer"
-
 )
 
-
 var ExitCheckAnalyzer = &analysis.Analyzer{
-    Name: "exitcheck",
-    Doc:  "check for os.Exit use",
-    Run:  run,
+	Name: "exitcheck",
+	Doc:  "check for os.Exit use",
+	Run:  run,
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
@@ -79,7 +77,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 						case *ast.Ident:
 							if n.Name == "os.Exit" {
 								foundExit = true
-							return false
+								return false
 							}
 						}
 						return true
@@ -87,38 +85,37 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				}
 			}
 			if foundExit {
-			pass.Reportf(node.Pos(), "os.Exit used in the code")
+				pass.Reportf(node.Pos(), "os.Exit used in the code")
 			}
-		return true
+			return true
 		})
 	}
 
 	return nil, nil
 }
 
-
 // Config — имя файла конфигурации.
 const Config = `/config.json`
 
 // ConfigData описывает структуру файла конфигурации.
 type ConfigData struct {
-    Staticcheck []string
+	Staticcheck []string
 }
 
 func main() {
 	appfile, err := os.Getwd()
-    
-    data, err := os.ReadFile(filepath.Join(filepath.Dir(appfile), Config))
-    if err != nil {
-        panic(err)
-    }
-    var cfg ConfigData
-    if err = json.Unmarshal(data, &cfg); err != nil {
-        panic(err)
-    }
-    mychecks := []*analysis.Analyzer{
-        ExitCheckAnalyzer,
-        asmdecl.Analyzer,
+
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(appfile), Config))
+	if err != nil {
+		panic(err)
+	}
+	var cfg ConfigData
+	if err = json.Unmarshal(data, &cfg); err != nil {
+		panic(err)
+	}
+	mychecks := []*analysis.Analyzer{
+		ExitCheckAnalyzer,
+		asmdecl.Analyzer,
 		assign.Analyzer,
 		atomic.Analyzer,
 		atomicalign.Analyzer,
@@ -151,28 +148,28 @@ func main() {
 		stringintconv.Analyzer,
 		structtag.Analyzer,
 		testinggoroutine.Analyzer,
-        tests.Analyzer,
-        timeformat.Analyzer,
+		tests.Analyzer,
+		timeformat.Analyzer,
 		unmarshal.Analyzer,
 		unreachable.Analyzer,
-        unsafeptr.Analyzer,
-        unusedresult.Analyzer,
+		unsafeptr.Analyzer,
+		unusedresult.Analyzer,
 		unusedwrite.Analyzer,
-        usesgenerics.Analyzer,
+		usesgenerics.Analyzer,
 		contextcheck.NewAnalyzer(contextcheck.Configuration{}),
 		analyzer.New(),
-    }
-    checks := make(map[string]bool)
-    for _, v := range cfg.Staticcheck {
-        checks[v] = true
-    }
-    // добавляем анализаторы из staticcheck, которые указаны в файле конфигурации
-    for _, v := range staticcheck.Analyzers {
-        if checks[v.Analyzer.Name] {
-            mychecks = append(mychecks, v.Analyzer)
-        }
-    }
-    multichecker.Main(
-        mychecks...,
-    )
-} 
+	}
+	checks := make(map[string]bool)
+	for _, v := range cfg.Staticcheck {
+		checks[v] = true
+	}
+	// добавляем анализаторы из staticcheck, которые указаны в файле конфигурации
+	for _, v := range staticcheck.Analyzers {
+		if checks[v.Analyzer.Name] {
+			mychecks = append(mychecks, v.Analyzer)
+		}
+	}
+	multichecker.Main(
+		mychecks...,
+	)
+}
