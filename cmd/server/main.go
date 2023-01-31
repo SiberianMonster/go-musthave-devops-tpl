@@ -196,7 +196,7 @@ func main() {
 		config.DBFlag = false
 	}
 
-	r := InitializeRouter(config.PrivateKey)
+	r := InitializeRouter()
 
 	srv := &http.Server{
 		Handler: r,
