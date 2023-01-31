@@ -5,7 +5,10 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"database/sql"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"log"
@@ -17,9 +20,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"crypto/x509"
-    "encoding/pem"
-	"crypto/rsa"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
@@ -28,7 +28,6 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	
 )
 
 var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
@@ -37,19 +36,19 @@ var storeInterval string
 var db *sql.DB
 
 func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
-    block, _ := pem.Decode(privPEM)
-    if block == nil {
+	block, _ := pem.Decode(privPEM)
+	if block == nil {
 		log.Printf("Error happened when parsing PEM")
-        return nil, errors.New("failed to parse PEM block containing the key")
-    }
+		return nil, errors.New("failed to parse PEM block containing the key")
+	}
 
-    priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-    if err != nil {
+	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
 		log.Printf("Error happened when parsing PEM. Err: %s", err)
-        return nil, err
-    }
+		return nil, err
+	}
 
-    return priv, nil
+	return priv, nil
 }
 
 func init() {
@@ -62,7 +61,7 @@ func init() {
 		serverConfig = config.LoadServerConfiguration(jsonFile, serverConfig)
 	}
 
-	host = config.GetEnv("ADDRESS", flag.String("a",serverConfig.Address, "ADDRESS"))
+	host = config.GetEnv("ADDRESS", flag.String("a", serverConfig.Address, "ADDRESS"))
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
 	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", serverConfig.StoreInterval, "STORE_INTERVAL"))
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", serverConfig.StoreFile, "STORE_FILE"))
@@ -79,7 +78,7 @@ func init() {
 		if err != nil {
 			log.Printf("Error happened when decoding rsa key. Err: %s", err)
 		}
-	} 
+	}
 
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
@@ -116,7 +115,7 @@ func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 	return r
 }
 
-// ParseStoreInterval function does the procesing of storeinterval input variable. 
+// ParseStoreInterval function does the procesing of storeinterval input variable.
 func ParseStoreInterval(storeParameter *string) int {
 
 	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
@@ -127,7 +126,7 @@ func ParseStoreInterval(storeParameter *string) int {
 	return storeInt
 }
 
-// ParseRestoreValue function does the procesing of restore input variable. 
+// ParseRestoreValue function does the procesing of restore input variable.
 func ParseRestoreValue(restore *string) bool {
 
 	restoreValue, err := strconv.ParseBool(*restore)

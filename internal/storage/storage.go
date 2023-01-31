@@ -211,7 +211,7 @@ func StaticFileUpload(storeFile string) {
 
 }
 
-// DBSave function performs the operation of inserting new system metrics to a SQL database with a query. 
+// DBSave function performs the operation of inserting new system metrics to a SQL database with a query.
 func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) error {
 
 	_, err := storeDB.ExecContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3);",
@@ -227,7 +227,7 @@ func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) er
 	return nil
 }
 
-// DBSaveBatch function performs the operation of inserting a batch of system metrics to a SQL database with a transaction. 
+// DBSaveBatch function performs the operation of inserting a batch of system metrics to a SQL database with a transaction.
 func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Context) error {
 
 	// шаг 1 — объявляем транзакцию
@@ -260,7 +260,7 @@ func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Cont
 	return tx.Commit()
 }
 
-// DBUpload function performs the operation of retrieving system metrics from a SQL database with a query. 
+// DBUpload function performs the operation of retrieving system metrics from a SQL database with a query.
 func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) (metrics.Metrics, error) {
 
 	var uploadedValue *float64

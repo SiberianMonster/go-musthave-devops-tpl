@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"

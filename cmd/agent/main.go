@@ -6,27 +6,27 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"log"
 	"net/http"
-	_ "net/http/pprof" 
+	_ "net/http/pprof"
 	"net/url"
+	"os"
+	"os/signal"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
-	"crypto/rand"
-    "crypto/rsa"
-	"crypto/sha256"
-	"os"
-	"crypto/x509"
-    "encoding/pem"
-	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
@@ -89,7 +89,7 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.P
 
 	body, err := json.Marshal(metricsObj)
 	if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 	}
 	log.Print(string(body))
 
@@ -143,23 +143,23 @@ func PostEncryptedStats(body []byte, urlString string, publicKey *rsa.PublicKey)
 }
 
 func ParseRsaPublicKey(pubPEM []byte) (*rsa.PublicKey, error) {
-    block, _ := pem.Decode([]byte(pubPEM))
-    if block == nil {
+	block, _ := pem.Decode([]byte(pubPEM))
+	if block == nil {
 		log.Printf("Error happened when parsing PEM. Err: %s", err)
-        return nil, err
-    }
+		return nil, err
+	}
 
-    pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-    if err != nil {
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
 		log.Printf("Error happened when parsing PEM. Err: %s", err)
-        return nil, err
-    }
+		return nil, err
+	}
 
-    switch pub := pub.(type) {
-    case *rsa.PublicKey:
-        return pub, nil
-    default:
-		return nil, errors.New("Key type is not RSA") 
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		return pub, nil
+	default:
+		return nil, errors.New("Key type is not RSA")
 	}
 }
 
@@ -208,7 +208,7 @@ func ReportStats() {
 
 }
 
-// ReportUpdateBatch allows to send all collected metrics in a single http request. 
+// ReportUpdateBatch allows to send all collected metrics in a single http request.
 // All the metrics are appended to a single slice of metrics objects.
 func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
@@ -339,7 +339,7 @@ func init() {
 		if err != nil {
 			log.Printf("Error happened when decoding rsa key. Err: %s", err)
 		}
-	} 
+	}
 
 	log.Printf("Build Version: %s", *buildVersion)
 	log.Printf("Build Date: %s", *buildDate)
@@ -371,7 +371,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
-	loop:
+loop:
 	for {
 
 		select {
@@ -383,7 +383,7 @@ func main() {
 		case <-reportTicker.C:
 			// send stats to the server
 			go ReportStats()
-		
+
 		case <-sigChan:
 			break loop
 		}

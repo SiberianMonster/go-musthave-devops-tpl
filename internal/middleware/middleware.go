@@ -4,14 +4,14 @@
 package middleware
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/rsa"
+	"github.com/gorilla/mux"
 	"github.com/klauspost/compress/gzip"
+	"io"
 	"net/http"
 	"strings"
-    "crypto/rsa"
-	"crypto"
-	"io"
-	"bytes"
-	"github.com/gorilla/mux"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
