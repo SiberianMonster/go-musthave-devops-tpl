@@ -197,6 +197,7 @@ func main() {
 	}
 
 	r := InitializeRouter(config.PrivateKey)
+	log.Println("Initialized router.")
 
 	srv := &http.Server{
 		Handler: r,
