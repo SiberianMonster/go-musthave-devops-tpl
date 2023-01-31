@@ -78,6 +78,8 @@ func init() {
 		if err != nil {
 			log.Printf("Error happened when decoding rsa key. Err: %s", err)
 		}
+	} else {
+		privateKey = nil
 	}
 
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
