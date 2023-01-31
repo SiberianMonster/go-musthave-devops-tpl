@@ -113,7 +113,7 @@ func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
-	r.Use(middleware.EncryptionHandler(privateKey))
+	//r.Use(middleware.EncryptionHandler(privateKey))
 	return r
 }
 
@@ -197,7 +197,6 @@ func main() {
 	}
 
 	r := InitializeRouter(config.PrivateKey)
-	log.Println("Initialized router.")
 
 	srv := &http.Server{
 		Handler: r,
