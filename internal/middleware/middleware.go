@@ -42,13 +42,11 @@ func GzipHandler(h http.Handler) http.Handler {
 	})
 }
 
-// GzipHandler function retruns a gzip wrapper for the server endpoints handlers.
+// EncryptionHandler ensures message decryption with private key.
 func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
-	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if privateKey != nil {
-				log.Println("decrypting with private key")
 				defer r.Body.Close()
 				bodyBytes, err := io.ReadAll(r.Body)
 				if err != nil {
@@ -62,7 +60,5 @@ func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 				}
 				r.Body = io.NopCloser(bytes.NewReader(decryptedBytes))
 			}
-			log.Println("failed to get here")
 		})
-	}
 }
