@@ -31,7 +31,7 @@ import (
 	
 )
 
-var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, cryptoKey *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
 var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
@@ -56,13 +56,19 @@ func init() {
 
 	metrics.Container = make(map[string]interface{})
 
-	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
+	serverConfig := config.NewServerConfig()
+	jsonFile = config.GetEnv("CONFIG", flag.String("c", "", "CONFIG"))
+	if *jsonFile != "" {
+		serverConfig = config.LoadServerConfiguration(jsonFile, serverConfig)
+	}
+
+	host = config.GetEnv("ADDRESS", flag.String("a",serverConfig.Address, "ADDRESS"))
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
-	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", "300", "STORE_INTERVAL"))
-	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
-	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
-	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
-	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", "", "CRYPTO_KEY"))
+	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", serverConfig.StoreInterval, "STORE_INTERVAL"))
+	storeFile = config.GetEnv("STORE_FILE", flag.String("f", serverConfig.StoreFile, "STORE_FILE"))
+	restore = config.GetEnv("RESTORE", flag.String("r", serverConfig.Restore, "RESTORE"))
+	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", serverConfig.DatabaseDsn, "DATABASE_DSN"))
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", serverConfig.CryptoKey, "CRYPTO_KEY"))
 	if *cryptoKey != "" {
 		privPEM, err := os.ReadFile(*cryptoKey)
 		if err != nil {

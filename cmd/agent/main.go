@@ -31,7 +31,7 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-var host, key, buildVersion, buildDate, buildCommit, cryptoKey *string
+var host, key, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
 var publicKey *rsa.PublicKey
 var pollCounterEnv, reportCounterEnv string
 var rtm runtime.MemStats
@@ -313,14 +313,19 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
 func init() {
 
-	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
-	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
+	agentConfig := config.NewAgentConfig()
+	jsonFile = config.GetEnv("CONFIG", flag.String("c", "", "CONFIG"))
+	if *jsonFile != "" {
+		agentConfig = config.LoadAgentConfiguration(jsonFile, agentConfig)
+	}
+	host = config.GetEnv("ADDRESS", flag.String("a", agentConfig.Address, "ADDRESS"))
+	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", agentConfig.PollInterval, "POLL_INTERVAL")), "s", "", -1)
+	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", agentConfig.ReportInterval, "REPORT_INTERVAL")), "s", "", -1)
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
 	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
-	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", "", "CRYPTO_KEY"))
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", agentConfig.CryptoKey, "CRYPTO_KEY"))
 	if *cryptoKey != "" {
 		pubPEM, err := os.ReadFile(*cryptoKey)
 		if err != nil {
