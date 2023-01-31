@@ -4,7 +4,6 @@
 package config
 
 import (
-	"crypto/rsa"
 	"database/sql"
 	"encoding/json"
 	"log"

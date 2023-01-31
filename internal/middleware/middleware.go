@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
@@ -41,8 +42,9 @@ func GzipHandler(h http.Handler) http.Handler {
 	})
 }
 
-// EncryptionHandler ensures message decryption with private key.
+// EncryptionHandler ensures message decryption.
 func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if privateKey != nil {
@@ -59,6 +61,7 @@ func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 				}
 				r.Body = io.NopCloser(bytes.NewReader(decryptedBytes))
 			}
-			next.ServeHTTP(w, r)
+			h.ServeHTTP(w, r)
 		})
+	}
 }
