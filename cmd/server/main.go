@@ -17,6 +17,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"crypto/x509"
+    "encoding/pem"
+	"crypto/rsa"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
@@ -25,11 +28,29 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	
 )
 
-var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, cryptoKey *string
+var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
+
+func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
+    block, _ := pem.Decode(privPEM)
+    if block == nil {
+		log.Printf("Error happened when parsing PEM")
+        return nil, errors.New("failed to parse PEM block containing the key")
+    }
+
+    priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+    if err != nil {
+		log.Printf("Error happened when parsing PEM. Err: %s", err)
+        return nil, err
+    }
+
+    return priv, nil
+}
 
 func init() {
 
@@ -41,6 +62,19 @@ func init() {
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", "/tmp/devops-metrics-db.json", "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", "true", "RESTORE"))
 	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", "", "DATABASE_DSN"))
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", "", "CRYPTO_KEY"))
+	if *cryptoKey != "" {
+		privPEM, err := os.ReadFile(*cryptoKey)
+		if err != nil {
+			log.Printf("Error happened when reading rsa key. Err: %s", err)
+		}
+
+		privateKey, err = ParseRsaPrivateKey(privPEM)
+		if err != nil {
+			log.Printf("Error happened when decoding rsa key. Err: %s", err)
+		}
+	} 
+
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
 	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
@@ -51,7 +85,7 @@ func init() {
 }
 
 // InitializeRouter function returns Gorilla mux router with the endpoints that allow reception / retrieval of system metrics.
-func InitializeRouter() *mux.Router {
+func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 
 	r := mux.NewRouter()
 
@@ -72,6 +106,7 @@ func InitializeRouter() *mux.Router {
 
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
+	r.Use(middleware.EncryptionHandler(privateKey))
 	return r
 }
 
@@ -121,6 +156,7 @@ func main() {
 	storeInt := ParseStoreInterval(storeParameter)
 
 	config.Key = *key
+	config.PrivateKey = privateKey
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
@@ -153,7 +189,7 @@ func main() {
 		config.DBFlag = false
 	}
 
-	r := InitializeRouter()
+	r := InitializeRouter(config.PrivateKey)
 
 	srv := &http.Server{
 		Handler: r,

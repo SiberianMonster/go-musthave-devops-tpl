@@ -6,6 +6,7 @@ package config
 import (
 	"database/sql"
 	"os"
+	"crypto/rsa"
 )
 
 // Database and Server context timeout values.
@@ -16,6 +17,8 @@ const (
 
 // Optional hashing Key.
 var Key string
+// Optional assymetric encription private Key.
+var PrivateKey *rsa.PrivateKey
 // Shared SQL database instance.
 var DB *sql.DB
 // Flag for SQL database use.

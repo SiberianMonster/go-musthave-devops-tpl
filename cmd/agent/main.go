@@ -19,13 +19,20 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"crypto/rand"
+    "crypto/rsa"
+	"crypto/sha256"
+	"os"
+	"crypto/x509"
+    "encoding/pem"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-var host, key, buildVersion, buildDate, buildCommit *string
+var host, key, buildVersion, buildDate, buildCommit, cryptoKey *string
+var publicKey *rsa.PublicKey
 var pollCounterEnv, reportCounterEnv string
 var rtm runtime.MemStats
 var v reflect.Value
@@ -53,7 +60,7 @@ func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 	return nil
 }
 
-// CounterCheck function is used to collect system metrics from runtime.ReadMemStats.
+// CollectStats function is used to collect system metrics from runtime.ReadMemStats.
 func CollectStats() {
 
 	log.Println("Collecting stats")
@@ -63,7 +70,7 @@ func CollectStats() {
 	Lm.m = metrics.MetricsUpdate(Lm.m, rtm)
 }
 
-// CounterCheck function collects additional system metrics with mem.VirtualMemory.
+// CollectMemStats function collects additional system metrics with mem.VirtualMemory.
 func CollectMemStats() {
 
 	log.Println("Collecting mem stats")
@@ -75,14 +82,19 @@ func CollectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
-// CounterCheck function collects additional system metrics with mem.VirtualMemory.
-func SendMemStats(metricsObj metrics.Metrics, urlString string) {
+// SendMemStats function posts collected statistical data to the server.
+func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.PublicKey) {
 
 	body, err := json.Marshal(metricsObj)
 	if err != nil {
 			log.Printf("Error happened in JSON marshal. Err: %s", err)
 	}
 	log.Print(string(body))
+
+	if publicKey != nil {
+		PostEncryptedStats(body, urlString, publicKey)
+		return
+	}
 
 	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
 	if err != nil {
@@ -99,6 +111,53 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string) {
 	log.Printf("Status code %q\n", response.Status)
 }
 
+// PostEncryptedStats function encrypts and posts assymetricaly encrypted data to the server.
+func PostEncryptedStats(body []byte, urlString string, publicKey *rsa.PublicKey) {
+
+	encryptedBytes, err := rsa.EncryptOAEP(
+		sha256.New(),
+		rand.Reader,
+		publicKey,
+		body,
+		nil)
+	if err != nil {
+		log.Printf("Error happened when encryptying message body. Err: %s", err)
+	}
+	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(encryptedBytes))
+	if err != nil {
+		log.Printf("Error happened when response received. Err: %s", err)
+		return
+
+	}
+	err = response.Body.Close()
+	if err != nil {
+		log.Printf("Error happened when response body closed. Err: %s", err)
+		return
+	}
+	// response status
+	log.Printf("Status code %q\n", response.Status)
+}
+
+func ParseRsaPublicKey(pubPEM []byte) (*rsa.PublicKey, error) {
+    block, _ := pem.Decode([]byte(pubPEM))
+    if block == nil {
+		log.Printf("Error happened when parsing PEM. Err: %s", err)
+        return nil, err
+    }
+
+    pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+    if err != nil {
+		log.Printf("Error happened when parsing PEM. Err: %s", err)
+        return nil, err
+    }
+
+    switch pub := pub.(type) {
+    case *rsa.PublicKey:
+        return pub, nil
+    default:
+		return nil, errors.New("Key type is not RSA") 
+	}
+}
 
 // ReportStats writes collected each system metric as a request body and posts them to the server.
 func ReportStats() {
@@ -139,7 +198,7 @@ func ReportStats() {
 			}
 		}
 
-		SendMemStats(metricsObj, url.String())
+		SendMemStats(metricsObj, url.String(), publicKey)
 
 	}
 
@@ -261,6 +320,18 @@ func init() {
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
 	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", "", "CRYPTO_KEY"))
+	if *cryptoKey != "" {
+		pubPEM, err := os.ReadFile(*cryptoKey)
+		if err != nil {
+			log.Printf("Error happened when reading file with rsa key. Err: %s", err)
+		}
+		publicKey, err = ParseRsaPublicKey(pubPEM)
+		if err != nil {
+			log.Printf("Error happened when decoding rsa key. Err: %s", err)
+		}
+	} 
+
 	log.Printf("Build Version: %s", *buildVersion)
 	log.Printf("Build Date: %s", *buildDate)
 	log.Printf("Build Commit: %s", *buildCommit)

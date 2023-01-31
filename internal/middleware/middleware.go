@@ -7,6 +7,11 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"net/http"
 	"strings"
+    "crypto/rsa"
+	"crypto"
+	"io"
+	"bytes"
+	"github.com/gorilla/mux"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
@@ -34,4 +39,27 @@ func GzipHandler(h http.Handler) http.Handler {
 		defer gz.Close()
 		h.ServeHTTP(httpp.GzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
+}
+
+// GzipHandler function retruns a gzip wrapper for the server endpoints handlers.
+func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			if privateKey != nil {
+				defer r.Body.Close()
+				bodyBytes, err := io.ReadAll(r.Body)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				decryptedBytes, err := privateKey.Decrypt(nil, bodyBytes, &rsa.OAEPOptions{Hash: crypto.SHA256})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				r.Body = io.NopCloser(bytes.NewReader(decryptedBytes))
+			}
+		})
+	}
 }
