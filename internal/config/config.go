@@ -21,9 +21,6 @@ const (
 // Optional hashing Key.
 var Key string
 
-// Optional assymetric encription private Key.
-var PrivateKey *rsa.PrivateKey
-
 // Shared SQL database instance.
 var DB *sql.DB
 

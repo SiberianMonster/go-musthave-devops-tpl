@@ -92,7 +92,7 @@ func init() {
 }
 
 // InitializeRouter function returns Gorilla mux router with the endpoints that allow reception / retrieval of system metrics.
-func InitializeRouter() *mux.Router {
+func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 
 	r := mux.NewRouter()
 
@@ -113,7 +113,7 @@ func InitializeRouter() *mux.Router {
 
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
-	r.Use(middleware.EncryptionHandler)
+	r.Use(middleware.EncryptionHandler(privateKey))
 	return r
 }
 
@@ -163,7 +163,6 @@ func main() {
 	storeInt := ParseStoreInterval(storeParameter)
 
 	config.Key = *key
-	config.PrivateKey = privateKey
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
@@ -196,7 +195,7 @@ func main() {
 		config.DBFlag = false
 	}
 
-	r := InitializeRouter()
+	r := InitializeRouter(privateKey)
 
 	srv := &http.Server{
 		Handler: r,
