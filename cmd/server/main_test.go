@@ -160,7 +160,7 @@ func TestShutdownGracefully(t *testing.T) {
 
 func ExampleInitializeRouter() {
 
-	r := InitializeRouter()
+	r := InitializeRouter(nil)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	floatValue := 2.0

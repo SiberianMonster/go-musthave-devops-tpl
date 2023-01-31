@@ -159,7 +159,7 @@ func ParseRsaPublicKey(pubPEM []byte) (*rsa.PublicKey, error) {
 	case *rsa.PublicKey:
 		return pub, nil
 	default:
-		return nil, errors.New("Key type is not RSA")
+		return nil, errors.New("key type is not RSA")
 	}
 }
 

@@ -86,10 +86,10 @@ func LoadAgentConfiguration(file *string, config AgentConfig) AgentConfig {
 
 func LoadServerConfiguration(file *string, config ServerConfig) ServerConfig {
 	configFile, err := os.Open(*file)
-	defer configFile.Close()
 	if err != nil {
 		log.Printf("Error happened when loading agent configuration. Err: %s", err)
 	}
+	defer configFile.Close()
 	jsonParser := json.NewDecoder(configFile)
 	jsonParser.Decode(&config)
 	return config
