@@ -25,6 +25,8 @@ import (
 	"os"
 	"crypto/x509"
     "encoding/pem"
+	"os/signal"
+	"syscall"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
@@ -96,7 +98,9 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.P
 		return
 	}
 
+	http.DefaultClient.Timeout = config.RequestTimeout * time.Second
 	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
+
 	if err != nil {
 		log.Printf("Error happened when response received. Err: %s", err)
 		return
@@ -224,7 +228,7 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
 	m.PollCount = 0
-	client := &http.Client{}
+	client := &http.Client{Timeout: config.RequestTimeout * time.Second}
 
 	for {
 
@@ -364,6 +368,10 @@ func main() {
 	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+
+	loop:
 	for {
 
 		select {
@@ -375,7 +383,13 @@ func main() {
 		case <-reportTicker.C:
 			// send stats to the server
 			go ReportStats()
+		
+		case <-sigChan:
+			break loop
 		}
 	}
+	// send latest stats to the server
+	ReportStats()
+	log.Println("Graceful shutdown")
 
 }

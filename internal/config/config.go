@@ -16,6 +16,7 @@ import (
 const (
 	ContextDBTimeout  = 5
 	ContextSrvTimeout = 10
+	RequestTimeout  = 5
 )
 
 // Optional hashing Key.
