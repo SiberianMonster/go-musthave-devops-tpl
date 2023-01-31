@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
 
