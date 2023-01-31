@@ -41,7 +41,7 @@ func GetEnv(key string, fallback *string) *string {
 type AgentConfig struct {
 	Address        string `json:"address"`
 	ReportInterval string `json:"report_interval"`
-	PollInterval   string `"poll_interval"`
+	PollInterval   string `json:"poll_interval"`
 	CryptoKey      string `json:"crypto_key"`
 }
 
@@ -75,10 +75,10 @@ func NewServerConfig() ServerConfig {
 
 func LoadAgentConfiguration(file *string, config AgentConfig) AgentConfig {
 	configFile, err := os.Open(*file)
-	defer configFile.Close()
 	if err != nil {
 		log.Printf("Error happened when loading agent configuration. Err: %s", err)
 	}
+	defer configFile.Close()
 	jsonParser := json.NewDecoder(configFile)
 	jsonParser.Decode(&config)
 	return config

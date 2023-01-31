@@ -145,7 +145,7 @@ func TestSendMemStats(t *testing.T) {
 	for _, tt := range tests {
 		metricsObj := metrics.Metrics{}
 		t.Run(tt.name, func(t *testing.T) {
-			SendMemStats(metricsObj, tt.urlString)
+			SendMemStats(metricsObj, tt.urlString, nil)
 
 		})
 	}
