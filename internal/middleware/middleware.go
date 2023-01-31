@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
@@ -47,6 +48,7 @@ func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if privateKey != nil {
+				log.Println("decrypting with private key")
 				defer r.Body.Close()
 				bodyBytes, err := io.ReadAll(r.Body)
 				if err != nil {
@@ -60,6 +62,7 @@ func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 				}
 				r.Body = io.NopCloser(bytes.NewReader(decryptedBytes))
 			}
+			log.Println("failed to get here")
 		})
 	}
 }
