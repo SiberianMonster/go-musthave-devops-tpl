@@ -7,12 +7,10 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/rsa"
-	"github.com/gorilla/mux"
 	"github.com/klauspost/compress/gzip"
 	"io"
 	"net/http"
 	"strings"
-	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
@@ -43,17 +41,17 @@ func GzipHandler(h http.Handler) http.Handler {
 }
 
 // EncryptionHandler ensures message decryption with private key.
-func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func EncryptionHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			if privateKey != nil {
+			if config.PrivateKey != nil {
 				defer r.Body.Close()
 				bodyBytes, err := io.ReadAll(r.Body)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
 				}
-				decryptedBytes, err := privateKey.Decrypt(nil, bodyBytes, &rsa.OAEPOptions{Hash: crypto.SHA256})
+				decryptedBytes, err := config.PrivateKey.Decrypt(nil, bodyBytes, &rsa.OAEPOptions{Hash: crypto.SHA256})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return

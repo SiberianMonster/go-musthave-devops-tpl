@@ -88,7 +88,7 @@ func TestInitializeRouter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			InitializeRouter(nil)
+			InitializeRouter()
 
 		})
 	}
@@ -160,7 +160,7 @@ func TestShutdownGracefully(t *testing.T) {
 
 func ExampleInitializeRouter() {
 
-	r := InitializeRouter(nil)
+	r := InitializeRouter()
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	floatValue := 2.0

@@ -92,7 +92,7 @@ func init() {
 }
 
 // InitializeRouter function returns Gorilla mux router with the endpoints that allow reception / retrieval of system metrics.
-func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
+func InitializeRouter() *mux.Router {
 
 	r := mux.NewRouter()
 
@@ -113,7 +113,7 @@ func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
-	r.Use(middleware.EncryptionHandler(privateKey))
+	r.Use(middleware.EncryptionHandler)
 	return r
 }
 
