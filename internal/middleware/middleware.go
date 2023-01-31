@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"log"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/httpp"
 )
