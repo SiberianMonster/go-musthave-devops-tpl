@@ -128,6 +128,7 @@ func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, r
 			}
 			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
 		}
+		log.Println("Initialised json storage.")
 	}
 	return nil, false
 }
