@@ -140,7 +140,7 @@ func ParseStoreInterval(storeParameter *string) int {
 	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
 	storeInt, err := strconv.Atoi(storeInterval)
 	if err != nil {
-		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
+		log.Printf("Error happened in reading storeInt variable. Err: %s", err)
 	}
 	return storeInt
 }
