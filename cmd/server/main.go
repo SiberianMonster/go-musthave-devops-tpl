@@ -30,11 +30,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey *string
 var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
 
+// ParseRsaPrivateKey function reads private rsa key from string.
 func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(privPEM)
 	if block == nil {
@@ -51,14 +52,139 @@ func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
 	return priv, nil
 }
 
+// SetUpConfiguration function reads server configuration parameters from .json file.
+func SetUpConfiguration(jsonFile *string, serverConfig config.ServerConfig) (config.ServerConfig, error) {
+
+	var err error
+	if *jsonFile != "" {
+		if !strings.Contains(*jsonFile, ".json") {
+			err = errors.New("config file should have .json extension")
+			log.Printf("Error happened in setting configuration. Err: %s", err)
+			return serverConfig, err
+		}
+
+		serverConfig, err = config.LoadServerConfiguration(jsonFile, serverConfig)
+		if err != nil {
+			log.Printf("Error happened when reading configs from json file. Err: %s", err)
+			return serverConfig, err
+		}
+	}
+	return serverConfig, nil
+}
+
+// SetUpCryptoKey returns private rsa key from a .pem file.
+func SetUpCryptoKey(cryptoKey *string, serverConfig config.ServerConfig) (*rsa.PrivateKey, error) {
+
+	var privateKey *rsa.PrivateKey
+	var err error
+	if *cryptoKey != "" {
+		if !strings.Contains(*cryptoKey, ".pem") {
+			err = errors.New("private key file should have .pem extension")
+			log.Printf("Error happened in opening rsa key. Err: %s", err)
+			return nil, err
+		}
+
+		privPEM, err := os.ReadFile(*cryptoKey)
+		if err != nil {
+			log.Printf("Error happened when reading rsa key. Err: %s", err)
+			return nil, err
+		}
+
+		privateKey, err = ParseRsaPrivateKey(privPEM)
+		if err != nil {
+			log.Printf("Error happened when decoding rsa key. Err: %s", err)
+			return nil, err
+		}
+	}
+	return privateKey, nil
+}
+
+// SetUpDataStorage initializes database connection / opens a .json file for storing received values.
+func SetUpDataStorage(connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) {
+
+	if len(*connStr) > 0 {
+		log.Println("Start db connection.")
+		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+		// не забываем освободить ресурс
+		defer cancel()
+		var err error
+		db, err = sql.Open("postgres", *connStr)
+		if err != nil {
+			log.Printf("Error happened when initiating connection to the db. Err: %s", err)
+		}
+		_, err = db.ExecContext(ctx,
+			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
+		if err != nil {
+			log.Printf("Error happened when creating sql table. Err: %s", err)
+
+		}
+
+		config.DB = db
+		config.DBFlag = true
+		defer db.Close()
+
+	} else {
+		if len(*storeFile) > 0 {
+			if restoreValue {
+				storage.StaticFileUpload(*storeFile)
+			}
+			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
+		}
+		config.DBFlag = false
+	}
+}
+
+// ParseStoreInterval function does the procesing of storeinterval input variable.
+func ParseStoreInterval(storeParameter *string) int {
+
+	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
+	storeInt, err := strconv.Atoi(storeInterval)
+	if err != nil {
+		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
+	}
+	return storeInt
+}
+
+// ParseRestoreValue function does the procesing of restore input variable.
+func ParseRestoreValue(restore *string) (bool, error) {
+
+	var err error
+	restoreValue := false
+	restoreValue, err = strconv.ParseBool(*restore)
+	if err != nil {
+		err = errors.New("could not parse restore value")
+		log.Printf("Error happened in retrieving env variable. Err: %s", err)
+		return restoreValue, err
+	}
+	return restoreValue, nil
+}
+
+// ShutdownGracefully handles server shutdown and information saving.
+func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
+
+	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)
+	defer shutdownRelease()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP shutdown error: %v", err)
+	}
+	log.Println("Graceful shutdown complete.")
+
+	if len(*storeFile) > 0 && len(*connStr) == 0 {
+		storage.StaticFileSave(*storeFile)
+	}
+}
+
 func init() {
 
 	metrics.Container = make(map[string]interface{})
-
+	var err error
 	serverConfig := config.NewServerConfig()
+
 	jsonFile = config.GetEnv("CONFIG", flag.String("c", "", "CONFIG"))
-	if *jsonFile != "" {
-		serverConfig = config.LoadServerConfiguration(jsonFile, serverConfig)
+	serverConfig, err = SetUpConfiguration(jsonFile, serverConfig)
+	if err != nil {
+		log.Printf("Error happened in reading json config file. Err: %s", err)
 	}
 
 	host = config.GetEnv("ADDRESS", flag.String("a", serverConfig.Address, "ADDRESS"))
@@ -67,19 +193,11 @@ func init() {
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", serverConfig.StoreFile, "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", serverConfig.Restore, "RESTORE"))
 	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", serverConfig.DatabaseDsn, "DATABASE_DSN"))
-	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", serverConfig.CryptoKey, "CRYPTO_KEY"))
-	if *cryptoKey != "" {
-		privPEM, err := os.ReadFile(*cryptoKey)
-		if err != nil {
-			log.Printf("Error happened when reading rsa key. Err: %s", err)
-		}
 
-		privateKey, err = ParseRsaPrivateKey(privPEM)
-		if err != nil {
-			log.Printf("Error happened when decoding rsa key. Err: %s", err)
-		}
-	} else {
-		privateKey = nil
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", serverConfig.CryptoKey, "CRYPTO_KEY"))
+	privateKey, err = SetUpCryptoKey(cryptoKey, serverConfig)
+	if err != nil {
+		log.Printf("Error happened in uploading encryption key. Err: %s", err)
 	}
 
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
@@ -117,83 +235,18 @@ func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 	return r
 }
 
-// ParseStoreInterval function does the procesing of storeinterval input variable.
-func ParseStoreInterval(storeParameter *string) int {
-
-	storeInterval = strings.Replace(strings.Replace(*storeParameter, "s", "", -1), "m", "", -1)
-	storeInt, err := strconv.Atoi(storeInterval)
-	if err != nil {
-		log.Fatalf("Error happened in reading storeInt variable. Err: %s", err)
-	}
-	return storeInt
-}
-
-// ParseRestoreValue function does the procesing of restore input variable.
-func ParseRestoreValue(restore *string) bool {
-
-	restoreValue, err := strconv.ParseBool(*restore)
-	if err != nil {
-		log.Fatalf("Error happened in reading restoreValue variable. Err: %s", err)
-	}
-	return restoreValue
-}
-
-// ShutdownGracefully handles server shutdown and information saving.
-func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
-
-	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), config.ContextSrvTimeout*time.Second)
-	defer shutdownRelease()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
-	}
-	log.Println("Graceful shutdown complete.")
-
-	if len(*storeFile) > 0 && len(*connStr) == 0 {
-		storage.StaticFileSave(*storeFile)
-	}
-}
-
 func main() {
 
 	flag.Parse()
 
-	restoreValue := ParseRestoreValue(restore)
+	restoreValue, err := ParseRestoreValue(restore)
+	if err != nil {
+		log.Printf("Failed to obtain restore variable. Err: %s", err)
+	}
 
 	storeInt := ParseStoreInterval(storeParameter)
 
 	config.Key = *key
-
-	if len(*connStr) > 0 {
-		log.Println("Start db connection.")
-		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
-		var err error
-		db, err = sql.Open("postgres", *connStr)
-		if err != nil {
-			log.Fatalf("Error happened when initiating connection to the db. Err: %s", err)
-		}
-		_, err = db.ExecContext(ctx,
-			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
-		if err != nil {
-			log.Fatalf("Error happened when creating sql table. Err: %s", err)
-
-		}
-
-		config.DB = db
-		config.DBFlag = true
-		defer db.Close()
-
-	} else {
-		if len(*storeFile) > 0 {
-			if restoreValue {
-				storage.StaticFileUpload(*storeFile)
-			}
-			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
-		}
-		config.DBFlag = false
-	}
 
 	r := InitializeRouter(privateKey)
 
@@ -201,6 +254,8 @@ func main() {
 		Handler: r,
 		Addr:    *host,
 	}
+
+	SetUpDataStorage(connStr, storeFile, restoreValue, storeInt, storeParameter)
 
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {

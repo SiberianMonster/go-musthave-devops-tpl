@@ -26,14 +26,7 @@ var DB *sql.DB
 // Flag for SQL database use.
 var DBFlag bool
 
-// GetEnv function is used for retrieving variables passed in the command prompt.
-func GetEnv(key string, fallback *string) *string {
-	if value, ok := os.LookupEnv(key); ok {
-		return &value
-	}
-	return fallback
-}
-
+// AgentConfig type is used to read data from json config file.
 type AgentConfig struct {
 	Address        string `json:"address"`
 	ReportInterval string `json:"report_interval"`
@@ -41,6 +34,7 @@ type AgentConfig struct {
 	CryptoKey      string `json:"crypto_key"`
 }
 
+// ServerConfig type is used to read data from json config file.
 type ServerConfig struct {
 	Address       string `json:"address"`
 	Restore       string `json:"restore"`
@@ -50,7 +44,15 @@ type ServerConfig struct {
 	CryptoKey     string `json:"crypto_key"`
 }
 
-// NewAgentConfig creates a new instance of AgentConfig
+// GetEnv function is used for retrieving variables passed in the command prompt.
+func GetEnv(key string, fallback *string) *string {
+	if value, ok := os.LookupEnv(key); ok {
+		return &value
+	}
+	return fallback
+}
+
+// NewAgentConfig function creates a new instance of AgentConfig.
 func NewAgentConfig() AgentConfig {
 	agentConfig := AgentConfig{}
 	agentConfig.Address = "127.0.0.1:8080"
@@ -59,7 +61,7 @@ func NewAgentConfig() AgentConfig {
 	return agentConfig
 }
 
-// NewServerConfig creates a new instance of ServerConfig
+// NewServerConfig function creates a new instance of ServerConfig.
 func NewServerConfig() ServerConfig {
 	serverConfig := ServerConfig{}
 	serverConfig.Address = "127.0.0.1:8080"
@@ -69,6 +71,7 @@ func NewServerConfig() ServerConfig {
 	return serverConfig
 }
 
+// LoadAgentConfiguration function loads config data from json into AgentConfig object.
 func LoadAgentConfiguration(file *string, config AgentConfig) AgentConfig {
 	configFile, err := os.Open(*file)
 	if err != nil {
@@ -80,13 +83,15 @@ func LoadAgentConfiguration(file *string, config AgentConfig) AgentConfig {
 	return config
 }
 
-func LoadServerConfiguration(file *string, config ServerConfig) ServerConfig {
+// LoadServerConfiguration function loads config data from json into ServerConfig object.
+func LoadServerConfiguration(file *string, config ServerConfig) (ServerConfig, error) {
 	configFile, err := os.Open(*file)
 	if err != nil {
 		log.Printf("Error happened when loading agent configuration. Err: %s", err)
+		return config, err
 	}
 	defer configFile.Close()
 	jsonParser := json.NewDecoder(configFile)
 	jsonParser.Decode(&config)
-	return config
+	return config, nil
 }

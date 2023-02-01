@@ -142,6 +142,7 @@ func PostEncryptedStats(body []byte, urlString string, publicKey *rsa.PublicKey)
 	log.Printf("Status code %q\n", response.Status)
 }
 
+// ParseRsaPublicKey function reads public rsa key from string.
 func ParseRsaPublicKey(pubPEM []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode([]byte(pubPEM))
 	if block == nil {

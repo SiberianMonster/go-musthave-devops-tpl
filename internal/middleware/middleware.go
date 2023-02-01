@@ -41,7 +41,7 @@ func GzipHandler(h http.Handler) http.Handler {
 	})
 }
 
-// EncryptionHandler ensures message decryption.
+// EncryptionHandler ensures incoming messages decryption.
 func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
