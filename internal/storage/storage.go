@@ -160,7 +160,7 @@ func StaticFileSave(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
 	}
 	writer := bufio.NewWriter(file)
 
@@ -172,11 +172,11 @@ func StaticFileSave(storeFile string) {
 	if len(data) > 3 {
 		log.Print(string(data))
 		if _, err := writer.Write(data); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 		}
 
 		if err := writer.WriteByte('\n'); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 		}
 		writer.Flush()
 	}
@@ -190,7 +190,7 @@ func StaticFileUpload(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
 
 	} else {
 		log.Printf("Uploading data from JSON")
@@ -299,7 +299,7 @@ func DBCheck(storeDB *sql.DB, name string, ctx context.Context) bool {
 	var ok bool
 	err := storeDB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", name).Scan(&ok)
 	if err != nil && err != sql.ErrNoRows {
-		log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+		log.Printf("Error happened when extracting entries from sql table. Err: %s", err)
 	}
 	log.Printf("checked for metrics in DB")
 	return ok
