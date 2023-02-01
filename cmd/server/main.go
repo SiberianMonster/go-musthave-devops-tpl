@@ -100,25 +100,26 @@ func SetUpCryptoKey(cryptoKey *string, serverConfig config.ServerConfig) (*rsa.P
 }
 
 // SetUpDataStorage initializes database connection / opens a .json file for storing received values.
-func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) {
+func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) (*sql.DB, bool) {
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
 		var err error
-		config.DB, err = sql.Open("postgres", *connStr)
+		db, err = sql.Open("postgres", *connStr)
 		if err != nil {
 			log.Printf("Error happened when initiating connection to the db. Err: %s", err)
+			return nil, false
 		}
 		log.Println("Connection initialised successfully.")
 		_, err = config.DB.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
 			log.Printf("Error happened when creating sql table. Err: %s", err)
+			return nil, false
 
 		}
 		log.Println("Initialised data table.")
-		config.DBFlag = true
-		defer config.DB.Close()
+		return db, true
 
 	} else {
 		if len(*storeFile) > 0 {
@@ -129,6 +130,7 @@ func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, r
 		}
 		config.DBFlag = false
 	}
+	return nil, false
 }
 
 // ParseStoreInterval function does the procesing of storeinterval input variable.
@@ -249,9 +251,8 @@ func main() {
 	// не забываем освободить ресурс
 	defer cancel()
 
-	go func() {
-		SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
-	}()
+	config.DB, config.DBFlag = SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
+	defer config.DB.Close() 
 
 	r := InitializeRouter(privateKey)
 

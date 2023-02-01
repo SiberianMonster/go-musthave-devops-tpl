@@ -252,7 +252,7 @@ func TestSetUpDataStorage(t *testing.T) {
 			connStr := ""
 			storeInt := 20
 			storeParameter := "20"
-			SetUpDataStorage(ctx, &connStr, &tt.storeFile, tt.restoreValue, storeInt, &storeParameter)
+			_, _ = SetUpDataStorage(ctx, &connStr, &tt.storeFile, tt.restoreValue, storeInt, &storeParameter)
 
 		})
 	}
