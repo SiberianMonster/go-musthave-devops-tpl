@@ -116,7 +116,7 @@ func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, r
 			log.Printf("Error happened when creating sql table. Err: %s", err)
 
 		}
-
+		log.Println("Initialised data table.")
 		config.DBFlag = true
 		defer config.DB.Close()
 
@@ -163,7 +163,7 @@ func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
 	defer shutdownRelease()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("HTTP shutdown error: %v", err)
+		log.Fatalf("HTTP shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
 
@@ -259,7 +259,7 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("HTTP server error: %v", err)
+			log.Fatalf("HTTP server error: %v", err)
 		}
 		log.Println("Stopped serving new connections.")
 	}()
