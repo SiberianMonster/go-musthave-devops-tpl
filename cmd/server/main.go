@@ -108,20 +108,19 @@ func SetUpDataStorage(connStr *string, storeFile *string, restoreValue bool, sto
 		// не забываем освободить ресурс
 		defer cancel()
 		var err error
-		db, err = sql.Open("postgres", *connStr)
+		config.DB, err = sql.Open("postgres", *connStr)
 		if err != nil {
 			log.Printf("Error happened when initiating connection to the db. Err: %s", err)
 		}
-		_, err = db.ExecContext(ctx,
+		_, err = config.DB.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
 			log.Printf("Error happened when creating sql table. Err: %s", err)
 
 		}
 
-		config.DB = db
 		config.DBFlag = true
-		defer db.Close()
+		defer config.DB.Close()
 
 	} else {
 		if len(*storeFile) > 0 {
@@ -166,7 +165,7 @@ func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
 	defer shutdownRelease()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP shutdown error: %v", err)
+		log.Printf("HTTP shutdown error: %v", err)
 	}
 	log.Println("Graceful shutdown complete.")
 
@@ -259,7 +258,7 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP server error: %v", err)
+			log.Printf("HTTP server error: %v", err)
 		}
 		log.Println("Stopped serving new connections.")
 	}()
