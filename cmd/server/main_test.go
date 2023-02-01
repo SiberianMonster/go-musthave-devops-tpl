@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
@@ -244,10 +246,13 @@ func TestSetUpDataStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+			// не забываем освободить ресурс
+			defer cancel()
 			connStr := ""
 			storeInt := 20
 			storeParameter := "20"
-			SetUpDataStorage(&connStr, &tt.storeFile, tt.restoreValue, storeInt, &storeParameter)
+			SetUpDataStorage(ctx, &connStr, &tt.storeFile, tt.restoreValue, storeInt, &storeParameter)
 
 		})
 	}

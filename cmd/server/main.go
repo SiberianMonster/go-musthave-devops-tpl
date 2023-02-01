@@ -100,18 +100,16 @@ func SetUpCryptoKey(cryptoKey *string, serverConfig config.ServerConfig) (*rsa.P
 }
 
 // SetUpDataStorage initializes database connection / opens a .json file for storing received values.
-func SetUpDataStorage(connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) {
+func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) {
 
 	if len(*connStr) > 0 {
 		log.Println("Start db connection.")
-		ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-		// не забываем освободить ресурс
-		defer cancel()
 		var err error
 		config.DB, err = sql.Open("postgres", *connStr)
 		if err != nil {
 			log.Printf("Error happened when initiating connection to the db. Err: %s", err)
 		}
+		log.Println("Connection initialised successfully.")
 		_, err = config.DB.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
@@ -254,7 +252,10 @@ func main() {
 		Addr:    *host,
 	}
 
-	SetUpDataStorage(connStr, storeFile, restoreValue, storeInt, storeParameter)
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+	SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
 
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
