@@ -111,7 +111,7 @@ func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, r
 			return nil, false
 		}
 		log.Println("Connection initialised successfully.")
-		_, err = config.DB.ExecContext(ctx,
+		_, err = db.ExecContext(ctx,
 			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
 		if err != nil {
 			log.Printf("Error happened when creating sql table. Err: %s", err)
@@ -128,7 +128,6 @@ func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, r
 			}
 			go storage.ContainerUpdate(storeInt, *storeFile, db, *storeParameter)
 		}
-		config.DBFlag = false
 	}
 	return nil, false
 }
