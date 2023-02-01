@@ -245,17 +245,20 @@ func main() {
 
 	config.Key = *key
 
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
+	go func() {
+		SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
+	}()
+
 	r := InitializeRouter(privateKey)
 
 	srv := &http.Server{
 		Handler: r,
 		Addr:    *host,
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
-	SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
 
 	go func() {
 		if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
