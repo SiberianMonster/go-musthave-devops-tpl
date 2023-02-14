@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCounterCheck(t *testing.T) {
@@ -134,23 +134,22 @@ func TestReportStats(t *testing.T) {
 func TestSendMemStats(t *testing.T) {
 
 	tests := []struct {
-		name           string
+		name      string
 		urlString string
 	}{
 		{
-			name: "trial run",
+			name:      "trial run",
 			urlString: "",
 		},
 	}
 	for _, tt := range tests {
-		metricsObj:= metrics.Metrics{}
+		metricsObj := metrics.Metrics{}
 		t.Run(tt.name, func(t *testing.T) {
-			SendMemStats(metricsObj, tt.urlString)
+			SendMemStats(metricsObj, tt.urlString, nil)
 
 		})
 	}
 }
-
 
 func ExampleCollectStats() {
 
