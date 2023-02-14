@@ -56,19 +56,20 @@ func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
 func SetUpConfiguration(jsonFile *string, serverConfig config.ServerConfig) (config.ServerConfig, error) {
 
 	var err error
-	if *jsonFile != "" {
-		if !strings.Contains(*jsonFile, ".json") {
+	if *jsonFile = "" {
+		return serverConfig, nil
+	}
+	if !strings.Contains(*jsonFile, ".json") {
 			err = errors.New("config file should have .json extension")
 			log.Printf("Error happened in setting configuration. Err: %s", err)
 			return serverConfig, err
-		}
+	}
 
-		serverConfig, err = config.LoadServerConfiguration(jsonFile, serverConfig)
+	serverConfig, err = config.LoadServerConfiguration(jsonFile, serverConfig)
 		if err != nil {
 			log.Printf("Error happened when reading configs from json file. Err: %s", err)
 			return serverConfig, err
 		}
-	}
 	return serverConfig, nil
 }
 
