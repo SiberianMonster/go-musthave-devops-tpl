@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/klauspost/compress/gzip"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 
@@ -59,6 +60,30 @@ func EncryptionHandler(privateKey *rsa.PrivateKey) mux.MiddlewareFunc {
 					return
 				}
 				r.Body = io.NopCloser(bytes.NewReader(decryptedBytes))
+			}
+			h.ServeHTTP(w, r)
+		})
+	}
+}
+
+// IPHandler ensures processing requests from trusted subnets only.
+func IPHandler(trustedSubnet *net.IPNet) mux.MiddlewareFunc {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			if trustedSubnet != nil {
+				reqIP := r.Header.Get("X-Real-IP")
+				if !trustedSubnet.Contains(reqIP) {
+					w.WriteHeader(http.StatusForbidden)
+					resp["status"] = "network not trusted"
+					jsonResp, err := json.Marshal(resp)
+					if err != nil {
+						log.Printf("Error happened in JSON marshal. Err: %s", err)
+						return
+					}
+					w.Write(jsonResp)
+					return
+				}
 			}
 			h.ServeHTTP(w, r)
 		})

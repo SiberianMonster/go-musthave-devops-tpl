@@ -12,6 +12,7 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -159,6 +160,20 @@ func ParseRestoreValue(restore *string) (bool, error) {
 	return restoreValue, nil
 }
 
+// ParseTrustedSub function does the procesing of trustedSubnet input variable.
+func ParseTrustedSub(trustedSubnet *string) (*net.IPNet, error) {
+
+	var err error
+	trustedSubNetwork := nil
+	_, trustedSubNetwork, err = net.ParseCIDR(*trustedSubnet)
+	if err != nil {
+		err = errors.New("could not parse trustedSubnet value")
+		log.Printf("Error happened in retrieving env variable. Err: %s", err)
+		return trustedSubNetwork, err
+	}
+	return trustedSubNetwork, nil
+}
+
 // ShutdownGracefully handles server shutdown and information saving.
 func ShutdownGracefully(srv *http.Server, storeFile *string, connStr *string) {
 
@@ -193,6 +208,7 @@ func init() {
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", serverConfig.StoreFile, "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", serverConfig.Restore, "RESTORE"))
 	connStr = config.GetEnv("DATABASE_DSN", flag.String("d", serverConfig.DatabaseDsn, "DATABASE_DSN"))
+	trustedSub = config.GetEnv("TRUSTED_SUBNET", flag.String("t", serverConfig.TrustedSub, "TRUSTED_SUBNET"))
 
 	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", serverConfig.CryptoKey, "CRYPTO_KEY"))
 	privateKey, err = SetUpCryptoKey(cryptoKey, serverConfig)
@@ -210,7 +226,7 @@ func init() {
 }
 
 // InitializeRouter function returns Gorilla mux router with the endpoints that allow reception / retrieval of system metrics.
-func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
+func InitializeRouter(privateKey *rsa.PrivateKey, trustedSubNetwork *net.IPNet) *mux.Router {
 
 	r := mux.NewRouter()
 
@@ -232,6 +248,7 @@ func InitializeRouter(privateKey *rsa.PrivateKey) *mux.Router {
 	r.HandleFunc("/", handlersWithKey.GenericHandler)
 	r.Use(middleware.GzipHandler)
 	r.Use(middleware.EncryptionHandler(privateKey))
+	r.Use(middleware.IPHandler(trustedSubNetwork))
 	return r
 }
 
@@ -246,6 +263,11 @@ func main() {
 
 	storeInt := ParseStoreInterval(storeParameter)
 
+	trustedSubNetwork, err := ParseTrustedSub(trustedSub)
+	if err != nil {
+		log.Printf("Failed to obtain trustedSubNetwork variable. Err: %s", err)
+	}
+
 	config.Key = *key
 
 	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
@@ -255,7 +277,7 @@ func main() {
 	config.DB, config.DBFlag = SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
 	defer config.DB.Close() 
 
-	r := InitializeRouter(privateKey)
+	r := InitializeRouter(privateKey, trustedSubNetwork)
 
 	srv := &http.Server{
 		Handler: r,

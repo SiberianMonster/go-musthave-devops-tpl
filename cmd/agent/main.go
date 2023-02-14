@@ -18,6 +18,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
+	"net"
 	"os"
 	"os/signal"
 	"reflect"
@@ -98,8 +99,19 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.P
 		return
 	}
 
-	http.DefaultClient.Timeout = config.RequestTimeout * time.Second
-	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
+	realIP := GetOutboundIP()
+
+	client := &http.Client{}
+	client.Timeout = config.RequestTimeout * time.Second
+	req, reqerr := http.NewRequest("POST", urlString, bytes.NewBuffer(body))
+	if reqerr != nil {
+		log.Printf("Error happened when creating a post request. Err: %s", reqerr)
+		return
+
+	}
+	req.Header.Set("Content-Encoding", "application/json")
+	req.Header.Set("X-Real-IP", realIP)
+	response, err := client.Do(req)
 
 	if err != nil {
 		log.Printf("Error happened when response received. Err: %s", err)
@@ -315,6 +327,22 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
 	}
 }
+
+
+// GetOutboundIP allows to retrieve preferred outbound ip of the machine
+func GetOutboundIP() net.IP {
+    conn, err := net.Dial("udp", "8.8.8.8:80")
+    if err != nil {
+        log.Printf("Error happened when dialing udp for IP address. Err: %s", err)
+		return nil
+    }
+    defer conn.Close()
+
+    localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+    return localAddr.IP
+}
+
 
 func init() {
 
