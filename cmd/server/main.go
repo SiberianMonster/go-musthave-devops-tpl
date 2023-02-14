@@ -31,7 +31,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey, trustedSub *string
 var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
