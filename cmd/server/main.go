@@ -57,7 +57,7 @@ func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
 func SetUpConfiguration(jsonFile *string, serverConfig config.ServerConfig) (config.ServerConfig, error) {
 
 	var err error
-	if *jsonFile = "" {
+	if *jsonFile == "" {
 		return serverConfig, nil
 	}
 	if !strings.Contains(*jsonFile, ".json") {
