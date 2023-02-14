@@ -73,10 +73,11 @@ func IPHandler(trustedSubnet *net.IPNet) mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+			resp = make(map[string]string)
 			if trustedSubnet != nil {
-				reqIP := r.Header.Get("X-Real-IP")
+				reqIPString := r.Header.Get("X-Real-IP")
+				reqIP := net.ParseIP(reqIPString)
 				if !trustedSubnet.Contains(reqIP) {
-					resp = make(map[string]string)
 					w.WriteHeader(http.StatusForbidden)
 					resp["status"] = "network not trusted"
 					jsonResp, err := json.Marshal(resp)
