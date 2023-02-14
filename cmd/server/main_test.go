@@ -270,7 +270,7 @@ func TestFatalSetUpCryptoKey(t *testing.T) {
 
 func ExampleInitializeRouter() {
 
-	r := InitializeRouter(nil)
+	r := InitializeRouter(nil, nil)
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 	floatValue := 2.0
@@ -374,7 +374,7 @@ func TestInitializeRouter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			InitializeRouter(nil)
+			InitializeRouter(nil, nil)
 
 		})
 	}
