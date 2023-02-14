@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/klauspost/compress/gzip"
 	"io"
+	"json"
 	"net"
 	"net/http"
 	"strings"
@@ -74,6 +75,7 @@ func IPHandler(trustedSubnet *net.IPNet) mux.MiddlewareFunc {
 			if trustedSubnet != nil {
 				reqIP := r.Header.Get("X-Real-IP")
 				if !trustedSubnet.Contains(reqIP) {
+					resp = make(map[string]string)
 					w.WriteHeader(http.StatusForbidden)
 					resp["status"] = "network not trusted"
 					jsonResp, err := json.Marshal(resp)
