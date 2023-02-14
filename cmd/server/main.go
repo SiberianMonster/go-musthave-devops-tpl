@@ -164,12 +164,12 @@ func ParseRestoreValue(restore *string) (bool, error) {
 func ParseTrustedSub(trustedSubnet *string) (*net.IPNet, error) {
 
 	var err error
-	trustedSubNetwork := nil
+	var trustedSubNetwork *net.IPNet
 	_, trustedSubNetwork, err = net.ParseCIDR(*trustedSubnet)
 	if err != nil {
 		err = errors.New("could not parse trustedSubnet value")
 		log.Printf("Error happened in retrieving env variable. Err: %s", err)
-		return trustedSubNetwork, err
+		return nil, err
 	}
 	return trustedSubNetwork, nil
 }
