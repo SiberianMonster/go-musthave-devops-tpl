@@ -20,7 +20,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"sync"
 	"time"
+	"google.golang.org/grpc"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
@@ -29,12 +31,73 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 )
 
-var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey, trustedSub *string
+var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey, trustedSub, grpcPort *string
 var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
+
+
+// GrpcServer supports all proto methods.
+type GrpcServer struct {
+
+    pb.UnimplementedGrpcServer
+
+    metrics sync.Map
+} 
+
+
+// Update receives new data from the client
+func (s *GrpcServer) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+    var response pb.UpdateResponse
+	var newDelta int64
+	var err error
+
+	if _, ok := s.metrics.Load(in.Metrics.Id); !ok {
+		if in.Metrics.Mtype == pb.Metrics_GAUGE {
+			s.metrics.Store(in.Metrics.Id, in.Metrics.Value)
+		} else {
+			s.metrics.Store(in.Metrics.Id, in.Metrics.Delta)
+		}
+    } else {
+		if in.Metrics.Mtype == pb.Metrics_GAUGE {
+			s.metrics.Store(in.Metrics.Id, in.Metrics.Value)
+		} else {
+			oldDelta, _ := s.metrics.Load(in.Metrics.Id)
+			d, _ := oldDelta.(int64)
+			newDelta = in.Metrics.Delta + d
+			s.metrics.Store(in.Metrics.Id, newDelta)
+		}
+	}
+
+	if _, ok := s.metrics.Load(in.Metrics.Id); !ok {
+		response.Error = "data update failed"
+		err = errors.New("private key file should have .pem extension")
+	}
+	return &response, err
+} 
+
+
+// Value returns stored data to the client
+func (s *GrpcServer) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueResponse, error) {
+    var response pb.ValueResponse
+	var err error
+
+	if value, ok := s.metrics.Load(in.Metricsname); ok {
+		response.Metrics.Id = in.Metricsname
+		if v, ok := value.(int64); ok {
+			response.Metrics.Delta = v
+		} 
+		if v, ok := value.(float64); ok {
+			response.Metrics.Value = v
+		}
+	} else {
+		err = errors.New("metrics not found")
+	}
+	return &response, err
+} 
 
 // ParseRsaPrivateKey function reads private rsa key from string.
 func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
@@ -204,6 +267,7 @@ func init() {
 
 	host = config.GetEnv("ADDRESS", flag.String("a", serverConfig.Address, "ADDRESS"))
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
+	grpcPort = config.GetEnv("PORT", flag.String("p", ":3200", "PORT"))
 	storeParameter = config.GetEnv("STORE_INTERVAL", flag.String("i", serverConfig.StoreInterval, "STORE_INTERVAL"))
 	storeFile = config.GetEnv("STORE_FILE", flag.String("f", serverConfig.StoreFile, "STORE_FILE"))
 	restore = config.GetEnv("RESTORE", flag.String("r", serverConfig.Restore, "RESTORE"))
@@ -290,6 +354,22 @@ func main() {
 		}
 		log.Println("Stopped serving new connections.")
 	}()
+
+	// определяем порт для сервера
+    listen, err := net.Listen("tcp", *grpcPort)
+    if err != nil {
+        log.Fatalf("GRPC server error: %v", err)
+    }
+    // создаём gRPC-сервер без зарегистрированной службы
+    s := grpc.NewServer()
+    // регистрируем сервис
+    pb.RegisterGrpcServer(s, &GrpcServer{})
+
+    log.Println("Сервер gRPC начал работу")
+    // получаем запрос gRPC
+    if err := s.Serve(listen); err != nil {
+        log.Fatalf("GRPC server error: %v", err)
+    }
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)

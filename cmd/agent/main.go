@@ -32,9 +32,13 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/shirou/gopsutil/v3/mem"
+	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
+
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
 )
 
-var host, key, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
+var host, key, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile, grpcPort *string
 var publicKey *rsa.PublicKey
 var pollCounterEnv, reportCounterEnv string
 var rtm runtime.MemStats
@@ -352,6 +356,7 @@ func init() {
 		agentConfig = config.LoadAgentConfiguration(jsonFile, agentConfig)
 	}
 	host = config.GetEnv("ADDRESS", flag.String("a", agentConfig.Address, "ADDRESS"))
+	grpcPort = config.GetEnv("PORT", flag.String("gp", ":3200", "PORT"))
 	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", agentConfig.PollInterval, "POLL_INTERVAL")), "s", "", -1)
 	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", agentConfig.ReportInterval, "REPORT_INTERVAL")), "s", "", -1)
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
@@ -399,6 +404,14 @@ func main() {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+
+	conn, err := grpc.Dial(*grpcPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer conn.Close()
+
+    _ = pb.NewGrpcClient(conn)
 
 loop:
 	for {
