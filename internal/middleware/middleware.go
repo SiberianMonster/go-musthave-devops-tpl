@@ -73,7 +73,7 @@ func IPHandler(trustedSubnet *net.IPNet) mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			resp = make(map[string]string)
+			resp := make(map[string]string)
 			if trustedSubnet != nil {
 				reqIPString := r.Header.Get("X-Real-IP")
 				reqIP := net.ParseIP(reqIPString)
