@@ -37,7 +37,7 @@ func NewWrapperJSONStruct() WrapperJSONStruct {
 	return ws
 }
 
-// UpdateJSONHandler enables reveiving new system metrics in json-encoded request body. 
+// UpdateJSONHandler enables reveiving new system metrics in json-encoded request body.
 func (ws WrapperJSONStruct) UpdateJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -200,7 +200,7 @@ func (ws WrapperJSONStruct) UpdateStringHandler(rw http.ResponseWriter, r *http.
 
 }
 
-// UpdateBatchJSONHandler enables reveiving multiple system metrics objects in single json-encoded request body. 
+// UpdateBatchJSONHandler enables reveiving multiple system metrics objects in single json-encoded request body.
 func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)
@@ -259,7 +259,7 @@ func (ws WrapperJSONStruct) UpdateBatchJSONHandler(rw http.ResponseWriter, r *ht
 
 }
 
-// ValueJSONHandler enables returning stored system metrics objects upon request with json-encoded body. 
+// ValueJSONHandler enables returning stored system metrics objects upon request with json-encoded body.
 func (ws WrapperJSONStruct) ValueJSONHandler(rw http.ResponseWriter, r *http.Request) {
 
 	resp = make(map[string]string)

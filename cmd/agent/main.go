@@ -6,18 +6,27 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"log"
 	"net/http"
-	_ "net/http/pprof" 
+	_ "net/http/pprof"
 	"net/url"
+	"net"
+	"os"
+	"os/signal"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
@@ -25,7 +34,8 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 )
 
-var host, key, buildVersion, buildDate, buildCommit *string
+var host, key, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile *string
+var publicKey *rsa.PublicKey
 var pollCounterEnv, reportCounterEnv string
 var rtm runtime.MemStats
 var v reflect.Value
@@ -53,7 +63,7 @@ func CounterCheck(pollCounterVar int, reportCounterVar int) error {
 	return nil
 }
 
-// CounterCheck function is used to collect system metrics from runtime.ReadMemStats.
+// CollectStats function is used to collect system metrics from runtime.ReadMemStats.
 func CollectStats() {
 
 	log.Println("Collecting stats")
@@ -63,7 +73,7 @@ func CollectStats() {
 	Lm.m = metrics.MetricsUpdate(Lm.m, rtm)
 }
 
-// CounterCheck function collects additional system metrics with mem.VirtualMemory.
+// CollectMemStats function collects additional system metrics with mem.VirtualMemory.
 func CollectMemStats() {
 
 	log.Println("Collecting mem stats")
@@ -75,16 +85,34 @@ func CollectMemStats() {
 	Lm.m.CPUutilization1 = v.UsedPercent
 }
 
-// CounterCheck function collects additional system metrics with mem.VirtualMemory.
-func SendMemStats(metricsObj metrics.Metrics, urlString string) {
+// SendMemStats function posts collected statistical data to the server.
+func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.PublicKey) {
 
 	body, err := json.Marshal(metricsObj)
 	if err != nil {
-			log.Printf("Error happened in JSON marshal. Err: %s", err)
+		log.Printf("Error happened in JSON marshal. Err: %s", err)
 	}
 	log.Print(string(body))
 
-	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(body))
+	if publicKey != nil {
+		PostEncryptedStats(body, urlString, publicKey)
+		return
+	}
+
+	realIP := GetOutboundIP()
+
+	client := &http.Client{}
+	client.Timeout = config.RequestTimeout * time.Second
+	req, reqerr := http.NewRequest("POST", urlString, bytes.NewBuffer(body))
+	if reqerr != nil {
+		log.Printf("Error happened when creating a post request. Err: %s", reqerr)
+		return
+
+	}
+	req.Header.Set("Content-Encoding", "application/json")
+	req.Header.Set("X-Real-IP", realIP.String())
+	response, err := client.Do(req)
+
 	if err != nil {
 		log.Printf("Error happened when response received. Err: %s", err)
 		return
@@ -99,6 +127,54 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string) {
 	log.Printf("Status code %q\n", response.Status)
 }
 
+// PostEncryptedStats function encrypts and posts assymetricaly encrypted data to the server.
+func PostEncryptedStats(body []byte, urlString string, publicKey *rsa.PublicKey) {
+
+	encryptedBytes, err := rsa.EncryptOAEP(
+		sha256.New(),
+		rand.Reader,
+		publicKey,
+		body,
+		nil)
+	if err != nil {
+		log.Printf("Error happened when encryptying message body. Err: %s", err)
+	}
+	response, err := http.Post(urlString, "application/json", bytes.NewBuffer(encryptedBytes))
+	if err != nil {
+		log.Printf("Error happened when response received. Err: %s", err)
+		return
+
+	}
+	err = response.Body.Close()
+	if err != nil {
+		log.Printf("Error happened when response body closed. Err: %s", err)
+		return
+	}
+	// response status
+	log.Printf("Status code %q\n", response.Status)
+}
+
+// ParseRsaPublicKey function reads public rsa key from string.
+func ParseRsaPublicKey(pubPEM []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(pubPEM))
+	if block == nil {
+		log.Printf("Error happened when parsing PEM. Err: %s", err)
+		return nil, err
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		log.Printf("Error happened when parsing PEM. Err: %s", err)
+		return nil, err
+	}
+
+	switch pub := pub.(type) {
+	case *rsa.PublicKey:
+		return pub, nil
+	default:
+		return nil, errors.New("key type is not RSA")
+	}
+}
 
 // ReportStats writes collected each system metric as a request body and posts them to the server.
 func ReportStats() {
@@ -139,13 +215,13 @@ func ReportStats() {
 			}
 		}
 
-		SendMemStats(metricsObj, url.String())
+		SendMemStats(metricsObj, url.String(), publicKey)
 
 	}
 
 }
 
-// ReportUpdateBatch allows to send all collected metrics in a single http request. 
+// ReportUpdateBatch allows to send all collected metrics in a single http request.
 // All the metrics are appended to a single slice of metrics objects.
 func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 
@@ -165,7 +241,7 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
 	m.PollCount = 0
-	client := &http.Client{}
+	client := &http.Client{Timeout: config.RequestTimeout * time.Second}
 
 	for {
 
@@ -252,15 +328,48 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 	}
 }
 
+
+// GetOutboundIP allows to retrieve preferred outbound ip of the machine
+func GetOutboundIP() net.IP {
+    conn, err := net.Dial("udp", "8.8.8.8:80")
+    if err != nil {
+        log.Printf("Error happened when dialing udp for IP address. Err: %s", err)
+		return nil
+    }
+    defer conn.Close()
+
+    localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+    return localAddr.IP
+}
+
+
 func init() {
 
-	host = config.GetEnv("ADDRESS", flag.String("a", "127.0.0.1:8080", "ADDRESS"))
-	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", "2", "POLL_INTERVAL")), "s", "", -1)
-	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", "10", "REPORT_INTERVAL")), "s", "", -1)
+	agentConfig := config.NewAgentConfig()
+	jsonFile = config.GetEnv("CONFIG", flag.String("c", "", "CONFIG"))
+	if *jsonFile != "" {
+		agentConfig = config.LoadAgentConfiguration(jsonFile, agentConfig)
+	}
+	host = config.GetEnv("ADDRESS", flag.String("a", agentConfig.Address, "ADDRESS"))
+	pollCounterEnv = strings.Replace(*config.GetEnv("POLL_INTERVAL", flag.String("p", agentConfig.PollInterval, "POLL_INTERVAL")), "s", "", -1)
+	reportCounterEnv = strings.Replace(*config.GetEnv("REPORT_INTERVAL", flag.String("r", agentConfig.ReportInterval, "REPORT_INTERVAL")), "s", "", -1)
 	key = config.GetEnv("KEY", flag.String("k", "", "KEY"))
 	buildVersion = config.GetEnv("BUILD_VERSION", flag.String("bv", "N/A", "BUILD_VERSION"))
 	buildDate = config.GetEnv("BUILD_DATE", flag.String("bd", "N/A", "BUILD_DATE"))
 	buildCommit = config.GetEnv("BUILD_COMMIT", flag.String("bc", "N/A", "BUILD_COMMIT"))
+	cryptoKey = config.GetEnv("CRYPTO_KEY", flag.String("crypto-key", agentConfig.CryptoKey, "CRYPTO_KEY"))
+	if *cryptoKey != "" {
+		pubPEM, err := os.ReadFile(*cryptoKey)
+		if err != nil {
+			log.Printf("Error happened when reading file with rsa key. Err: %s", err)
+		}
+		publicKey, err = ParseRsaPublicKey(pubPEM)
+		if err != nil {
+			log.Printf("Error happened when decoding rsa key. Err: %s", err)
+		}
+	}
+
 	log.Printf("Build Version: %s", *buildVersion)
 	log.Printf("Build Date: %s", *buildDate)
 	log.Printf("Build Commit: %s", *buildCommit)
@@ -288,6 +397,10 @@ func main() {
 	pollTicker := time.NewTicker(time.Second * time.Duration(pollCounterVar))
 	reportTicker := time.NewTicker(time.Second * time.Duration(reportCounterVar))
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
+
+loop:
 	for {
 
 		select {
@@ -299,7 +412,13 @@ func main() {
 		case <-reportTicker.C:
 			// send stats to the server
 			go ReportStats()
+
+		case <-sigChan:
+			break loop
 		}
 	}
+	// send latest stats to the server
+	ReportStats()
+	log.Println("Graceful shutdown")
 
 }
