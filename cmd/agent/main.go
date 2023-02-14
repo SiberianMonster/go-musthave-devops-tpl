@@ -110,7 +110,7 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.P
 
 	}
 	req.Header.Set("Content-Encoding", "application/json")
-	req.Header.Set("X-Real-IP", realIP)
+	req.Header.Set("X-Real-IP", realIP.String())
 	response, err := client.Do(req)
 
 	if err != nil {
