@@ -25,7 +25,7 @@ message Metrics {
 }
 
 
-service ServerService {
+service Grpc {
   rpc Update(UpdateRequest) returns (UpdateResponse);
   rpc Value(ValueRequest) returns (ValueResponse);
 } 
@@ -48,5 +48,4 @@ message ValueRequest {
 
 message ValueResponse {
   Metrics metrics = 1;
-  string error = 2; // ошибка
 }
