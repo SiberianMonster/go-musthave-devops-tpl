@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"flag"
+	"google.golang.org/grpc"
 	"log"
 	"net"
 	"net/http"
@@ -19,11 +20,11 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"sync"
+	"syscall"
 	"time"
-	"google.golang.org/grpc"
 
+	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
@@ -31,7 +32,6 @@ import (
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/storage"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
-	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 )
 
 var host, storeFile, restore, key, connStr, storeParameter, buildVersion, buildDate, buildCommit, jsonFile, cryptoKey, trustedSub, grpcPort *string
@@ -39,65 +39,105 @@ var privateKey *rsa.PrivateKey
 var storeInterval string
 var db *sql.DB
 
-
 // GrpcServer supports all proto methods.
 type GrpcServer struct {
+	pb.UnimplementedGrpcServer
 
-    pb.UnimplementedGrpcServer
-
-    metrics sync.Map
-} 
-
+	metrics sync.Map
+	key     string
+	dB      *sql.DB
+	dBFlag  bool
+}
 
 // Update receives new data from the client
 func (s *GrpcServer) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.UpdateResponse, error) {
-    var response pb.UpdateResponse
-	var newDelta int64
+	var response pb.UpdateResponse
 	var err error
+	var updateParams metrics.Metrics
 
-	if _, ok := s.metrics.Load(in.Metrics.Id); !ok {
-		if in.Metrics.Mtype == pb.Metrics_GAUGE {
-			s.metrics.Store(in.Metrics.Id, in.Metrics.Value)
-		} else {
-			s.metrics.Store(in.Metrics.Id, in.Metrics.Delta)
-		}
-    } else {
-		if in.Metrics.Mtype == pb.Metrics_GAUGE {
-			s.metrics.Store(in.Metrics.Id, in.Metrics.Value)
-		} else {
-			oldDelta, _ := s.metrics.Load(in.Metrics.Id)
-			d, _ := oldDelta.(int64)
-			newDelta = in.Metrics.Delta + d
-			s.metrics.Store(in.Metrics.Id, newDelta)
+	updateParams.ID = in.Metrics.Id
+	updateParams.Delta = &in.Metrics.Delta
+	updateParams.Value = &in.Metrics.Value
+	updateParams.Hash = in.Metrics.Hash
+	if in.Metrics.Mtype == pb.Metrics_GAUGE {
+		updateParams.MType = "gauge"
+	} else {
+		updateParams.MType = "counter"
+	}
+
+	if s.key != "" {
+
+		testHash := metrics.MetricsHash(updateParams, s.key)
+
+		if testHash != updateParams.Hash {
+			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
+			response.Error = "hashing values do not match"
+			err = errors.New("hashing values do not match")
+			return &response, err
+
 		}
 	}
 
-	if _, ok := s.metrics.Load(in.Metrics.Id); !ok {
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+	err = storage.RepositoryUpdate(updateParams, s.dB, s.dBFlag, ctx)
+	if err != nil {
 		response.Error = "data update failed"
-		err = errors.New("private key file should have .pem extension")
+		err = errors.New("data update failed")
 	}
-	return &response, err
-} 
 
+	return &response, err
+}
 
 // Value returns stored data to the client
 func (s *GrpcServer) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueResponse, error) {
-    var response pb.ValueResponse
+	var response pb.ValueResponse
 	var err error
+	var receivedParams metrics.Metrics
 
-	if value, ok := s.metrics.Load(in.Metricsname); ok {
-		response.Metrics.Id = in.Metricsname
-		if v, ok := value.(int64); ok {
-			response.Metrics.Delta = v
-		} 
-		if v, ok := value.(float64); ok {
-			response.Metrics.Value = v
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+	// не забываем освободить ресурс
+	defer cancel()
+
+	var ok bool
+	if s.dBFlag {
+		ok = storage.DBCheck(s.dB, in.Metricsname, ctx)
+
 	} else {
-		err = errors.New("metrics not found")
+		_, ok = metrics.Container[in.Metricsname]
 	}
+
+	if !ok {
+		log.Printf("missing params value")
+		err = errors.New("missing params value")
+		return &response, err
+	}
+
+	receivedParams.ID = in.Metricsname
+	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, s.dB, s.dBFlag, ctx)
+	if getErr != nil {
+		log.Printf("value retrieval failed")
+		err = errors.New("value retrieval failed")
+		return &response, err
+	}
+
+	if s.key != "" {
+		retrievedMetrics.Hash = metrics.MetricsHash(retrievedMetrics, s.key)
+	}
+
+	response.Metrics.Id = in.Metricsname
+	response.Metrics.Delta = *retrievedMetrics.Delta
+	response.Metrics.Value = *retrievedMetrics.Value
+	response.Metrics.Hash = retrievedMetrics.Hash
+	if retrievedMetrics.MType == "gauge" {
+		response.Metrics.Mtype = pb.Metrics_GAUGE
+	} else {
+		response.Metrics.Mtype = pb.Metrics_COUNTER
+	}
+
 	return &response, err
-} 
+}
 
 // ParseRsaPrivateKey function reads private rsa key from string.
 func ParseRsaPrivateKey(privPEM []byte) (*rsa.PrivateKey, error) {
@@ -124,16 +164,16 @@ func SetUpConfiguration(jsonFile *string, serverConfig config.ServerConfig) (con
 		return serverConfig, nil
 	}
 	if !strings.Contains(*jsonFile, ".json") {
-			err = errors.New("config file should have .json extension")
-			log.Printf("Error happened in setting configuration. Err: %s", err)
-			return serverConfig, err
+		err = errors.New("config file should have .json extension")
+		log.Printf("Error happened in setting configuration. Err: %s", err)
+		return serverConfig, err
 	}
 
 	serverConfig, err = config.LoadServerConfiguration(jsonFile, serverConfig)
-		if err != nil {
-			log.Printf("Error happened when reading configs from json file. Err: %s", err)
-			return serverConfig, err
-		}
+	if err != nil {
+		log.Printf("Error happened when reading configs from json file. Err: %s", err)
+		return serverConfig, err
+	}
 	return serverConfig, nil
 }
 
@@ -339,7 +379,7 @@ func main() {
 	defer cancel()
 
 	config.DB, config.DBFlag = SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
-	defer config.DB.Close() 
+	defer config.DB.Close()
 
 	r := InitializeRouter(privateKey, trustedSubNetwork)
 
@@ -356,20 +396,20 @@ func main() {
 	}()
 
 	// определяем порт для сервера
-    listen, err := net.Listen("tcp", *grpcPort)
-    if err != nil {
-        log.Fatalf("GRPC server error: %v", err)
-    }
-    // создаём gRPC-сервер без зарегистрированной службы
-    s := grpc.NewServer()
-    // регистрируем сервис
-    pb.RegisterGrpcServer(s, &GrpcServer{})
+	listen, err := net.Listen("tcp", *grpcPort)
+	if err != nil {
+		log.Fatalf("GRPC server error: %v", err)
+	}
+	// создаём gRPC-сервер без зарегистрированной службы
+	s := grpc.NewServer()
+	// регистрируем сервис
+	pb.RegisterGrpcServer(s, &GrpcServer{key: config.Key, dB: config.DB, dBFlag: config.DBFlag})
 
-    log.Println("Сервер gRPC начал работу")
-    // получаем запрос gRPC
-    if err := s.Serve(listen); err != nil {
-        log.Fatalf("GRPC server error: %v", err)
-    }
+	log.Println("Сервер gRPC начал работу")
+	// получаем запрос gRPC
+	if err := s.Serve(listen); err != nil {
+		log.Fatalf("GRPC server error: %v", err)
+	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
