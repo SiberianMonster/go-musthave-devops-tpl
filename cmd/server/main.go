@@ -78,9 +78,6 @@ func (s *GrpcServer) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.Upda
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
 	err = storage.RepositoryUpdate(updateParams, s.dB, s.dBFlag, ctx)
 	if err != nil {
 		response.Error = "data update failed"
@@ -95,10 +92,6 @@ func (s *GrpcServer) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueR
 	var response pb.ValueResponse
 	var err error
 	var receivedParams metrics.Metrics
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-	// не забываем освободить ресурс
-	defer cancel()
 
 	var ok bool
 	if s.dBFlag {
