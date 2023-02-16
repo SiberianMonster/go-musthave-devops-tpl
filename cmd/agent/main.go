@@ -6,6 +6,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -107,7 +108,7 @@ func SendMemStats(metricsObj metrics.Metrics, urlString string, publicKey *rsa.P
 
 	client := &http.Client{}
 	client.Timeout = config.RequestTimeout * time.Second
-	req, reqerr := http.NewRequest("POST", urlString, bytes.NewBuffer(body))
+	req, reqerr := http.NewRequest(http.MethodPost, urlString, bytes.NewBuffer(body))
 	if reqerr != nil {
 		log.Printf("Error happened when creating a post request. Err: %s", reqerr)
 		return
@@ -409,7 +410,28 @@ func main() {
 	}
 	defer conn.Close()
 
-	_ = pb.NewGrpcClient(conn)
+	grpcClient := pb.NewGrpcClient(conn)
+
+	testInputGauge := &pb.UpdateRequest{Metrics: &pb.Metrics{
+		Id:    "TotalMemAlloc",
+		Mtype: pb.Metrics_GAUGE,
+		Delta: 0,
+		Value: 1.11,
+		Hash:  "",
+	},
+	}
+	testInputCounter := &pb.UpdateRequest{Metrics: &pb.Metrics{
+		Id:    "Counter",
+		Mtype: pb.Metrics_COUNTER,
+		Delta: 1,
+		Value: 0.0,
+		Hash:  "",
+	},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
+	defer cancel()
+	_, err = grpcClient.Update(ctx, testInputGauge)
+	_, err = grpcClient.Update(ctx, testInputCounter)
 
 loop:
 	for {

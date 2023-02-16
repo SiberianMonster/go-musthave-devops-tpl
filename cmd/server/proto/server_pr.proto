@@ -13,8 +13,9 @@ message Metrics {
   string id = 1; 
 
   enum MType {
-      GAUGE = 0;
-      COUNTER = 1;
+      INVALID = 0;
+      GAUGE = 1;
+      COUNTER = 2;
   }
 
   MType mtype = 2;
