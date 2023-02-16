@@ -658,25 +658,6 @@ func TestGrpcValue(t *testing.T) {
 
 	client := pb.NewGrpcClient(conn)
 
-	testInputGauge := &pb.UpdateRequest{Metrics: &pb.Metrics{
-		Id:    "TotalMemAlloc",
-		Mtype: pb.Metrics_GAUGE,
-		Delta: 0,
-		Value: 1.11,
-		Hash:  "",
-	},
-	}
-	testInputCounter := &pb.UpdateRequest{Metrics: &pb.Metrics{
-		Id:    "Counter",
-		Mtype: pb.Metrics_COUNTER,
-		Delta: 1,
-		Value: 0.0,
-		Hash:  "",
-	},
-	}
-	_, err = client.Update(ctx, testInputGauge)
-	_, err = client.Update(ctx, testInputCounter)
-
 	type expectation struct {
 		out *pb.Metrics
 		err error

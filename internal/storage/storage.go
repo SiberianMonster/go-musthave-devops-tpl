@@ -23,7 +23,7 @@ import (
 var err error
 
 // SetUpDbConnection initializes database connection.
-func SetUpDbConnection(ctx context.Context, connStr *string) (*sql.DB, bool) {
+func SetUpDBConnection(ctx context.Context, connStr *string) (*sql.DB, bool) {
 
 	log.Println("Start db connection.")
 	db, err := sql.Open("postgres", *connStr)

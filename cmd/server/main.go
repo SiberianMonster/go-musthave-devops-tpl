@@ -216,7 +216,7 @@ func SetUpCryptoKey(cryptoKey *string, serverConfig config.ServerConfig) (*rsa.P
 func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) (*sql.DB, bool) {
 
 	if len(*connStr) > 0 {
-		db, ok := storage.SetUpDbConnection(ctx, connStr)
+		db, ok := storage.SetUpDBConnection(ctx, connStr)
 		return db, ok
 
 	} else {

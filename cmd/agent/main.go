@@ -412,7 +412,7 @@ func main() {
 
 	grpcClient := pb.NewGrpcClient(conn)
 
-	testInputGauge := &pb.UpdateRequest{Metrics: &pb.Metrics{
+	testInput := &pb.UpdateRequest{Metrics: &pb.Metrics{
 		Id:    "TotalMemAlloc",
 		Mtype: pb.Metrics_GAUGE,
 		Delta: 0,
@@ -420,18 +420,13 @@ func main() {
 		Hash:  "",
 	},
 	}
-	testInputCounter := &pb.UpdateRequest{Metrics: &pb.Metrics{
-		Id:    "Counter",
-		Mtype: pb.Metrics_COUNTER,
-		Delta: 1,
-		Value: 0.0,
-		Hash:  "",
-	},
-	}
+	
 	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
 	defer cancel()
-	_, err = grpcClient.Update(ctx, testInputGauge)
-	_, err = grpcClient.Update(ctx, testInputCounter)
+	_, err = grpcClient.Update(ctx, testInput)
+	if err != nil {
+		log.Printf("error when posting message with grpc client: %v", err)
+	}
 
 loop:
 	for {
