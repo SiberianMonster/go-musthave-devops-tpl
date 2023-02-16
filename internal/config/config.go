@@ -42,7 +42,7 @@ type ServerConfig struct {
 	StoreFile     string `json:"store_file"`
 	DatabaseDsn   string `json:"database_dsn"`
 	CryptoKey     string `json:"crypto_key"`
-	TrustedSub     string `json:"trusted_subnet"`
+	TrustedSub    string `json:"trusted_subnet"`
 }
 
 // GetEnv function is used for retrieving variables passed in the command prompt.

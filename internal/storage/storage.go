@@ -22,6 +22,27 @@ import (
 
 var err error
 
+// SetUpDbConnection initializes database connection.
+func SetUpDbConnection(ctx context.Context, connStr *string) (*sql.DB, bool) {
+
+	log.Println("Start db connection.")
+	db, err := sql.Open("postgres", *connStr)
+	if err != nil {
+		log.Printf("Error happened when initiating connection to the db. Err: %s", err)
+		return nil, false
+	}
+	log.Println("Connection initialised successfully.")
+	_, err = db.ExecContext(ctx,
+		"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
+	if err != nil {
+		log.Printf("Error happened when creating sql table. Err: %s", err)
+		return nil, false
+
+	}
+	log.Println("Initialised data table.")
+	return db, true
+}
+
 // RepositoryUpdate function saves received system metrics to a SQL database if it is enabled
 // or updates metrics container that is later exported to the json-file.
 func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) error {

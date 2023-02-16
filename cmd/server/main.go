@@ -55,22 +55,31 @@ func (s *GrpcServer) Update(ctx context.Context, in *pb.UpdateRequest) (*pb.Upda
 	var err error
 	var updateParams metrics.Metrics
 
+	if in.Metrics.Id == "" {
+		log.Println("Empty metrics ID")
+		response.Error = "empty metrics ID"
+		err = errors.New("empty metrics ID")
+		return &response, err
+	}
+
 	updateParams.ID = in.Metrics.Id
-	updateParams.Delta = &in.Metrics.Delta
-	updateParams.Value = &in.Metrics.Value
 	updateParams.Hash = in.Metrics.Hash
+
 	if in.Metrics.Mtype == pb.Metrics_GAUGE {
 		updateParams.MType = "gauge"
+		updateParams.Value = &in.Metrics.Value
+
 	} else {
 		updateParams.MType = "counter"
+		updateParams.Delta = &in.Metrics.Delta
 	}
 
 	if s.key != "" {
 
+		log.Println("checking hash")
 		testHash := metrics.MetricsHash(updateParams, s.key)
 
 		if testHash != updateParams.Hash {
-			log.Printf("Hashing values do not match. Value produced: %s. Value received: %s", testHash, updateParams.Hash)
 			response.Error = "hashing values do not match"
 			err = errors.New("hashing values do not match")
 			return &response, err
@@ -108,9 +117,12 @@ func (s *GrpcServer) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueR
 	}
 
 	receivedParams.ID = in.Metricsname
+	if in.Metricsname == "Counter" {
+		receivedParams.MType = "counter"
+	}
+
 	retrievedMetrics, getErr := storage.RepositoryRetrieve(receivedParams, s.dB, s.dBFlag, ctx)
 	if getErr != nil {
-		log.Printf("value retrieval failed")
 		err = errors.New("value retrieval failed")
 		return &response, err
 	}
@@ -119,15 +131,18 @@ func (s *GrpcServer) Value(ctx context.Context, in *pb.ValueRequest) (*pb.ValueR
 		retrievedMetrics.Hash = metrics.MetricsHash(retrievedMetrics, s.key)
 	}
 
-	response.Metrics.Id = in.Metricsname
-	response.Metrics.Delta = *retrievedMetrics.Delta
-	response.Metrics.Value = *retrievedMetrics.Value
-	response.Metrics.Hash = retrievedMetrics.Hash
-	if retrievedMetrics.MType == "gauge" {
-		response.Metrics.Mtype = pb.Metrics_GAUGE
-	} else {
-		response.Metrics.Mtype = pb.Metrics_COUNTER
+	result := &pb.Metrics{
+		Id: in.Metricsname,
 	}
+	if retrievedMetrics.MType == "counter" {
+		result.Mtype = pb.Metrics_COUNTER
+		result.Delta = *retrievedMetrics.Delta
+	} else {
+
+		result.Mtype = pb.Metrics_GAUGE
+		result.Value = *retrievedMetrics.Value
+	}
+	response.Metrics = result
 
 	return &response, err
 }
@@ -201,23 +216,8 @@ func SetUpCryptoKey(cryptoKey *string, serverConfig config.ServerConfig) (*rsa.P
 func SetUpDataStorage(ctx context.Context, connStr *string, storeFile *string, restoreValue bool, storeInt int, storeParameter *string) (*sql.DB, bool) {
 
 	if len(*connStr) > 0 {
-		log.Println("Start db connection.")
-		var err error
-		db, err = sql.Open("postgres", *connStr)
-		if err != nil {
-			log.Printf("Error happened when initiating connection to the db. Err: %s", err)
-			return nil, false
-		}
-		log.Println("Connection initialised successfully.")
-		_, err = db.ExecContext(ctx,
-			"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
-		if err != nil {
-			log.Printf("Error happened when creating sql table. Err: %s", err)
-			return nil, false
-
-		}
-		log.Println("Initialised data table.")
-		return db, true
+		db, ok := storage.SetUpDbConnection(ctx, connStr)
+		return db, ok
 
 	} else {
 		if len(*storeFile) > 0 {
@@ -349,15 +349,12 @@ func InitializeRouter(privateKey *rsa.PrivateKey, trustedSubNetwork *net.IPNet) 
 	return r
 }
 
-func main() {
-
-	flag.Parse()
-
+// ParseEnvVariables function wraps processing of passed parameters.
+func ParseEnvVariables(restore *string, storeParameter *string, trustedSub *string) (bool, int, *net.IPNet) {
 	restoreValue, err := ParseRestoreValue(restore)
 	if err != nil {
 		log.Printf("Failed to obtain restore variable. Err: %s", err)
 	}
-
 	storeInt := ParseStoreInterval(storeParameter)
 
 	trustedSubNetwork, err := ParseTrustedSub(trustedSub)
@@ -366,9 +363,16 @@ func main() {
 	}
 
 	config.Key = *key
+	return restoreValue, storeInt, trustedSubNetwork
+}
+
+func main() {
+
+	flag.Parse()
+
+	restoreValue, storeInt, trustedSubNetwork := ParseEnvVariables(restore, storeParameter, trustedSub)
 
 	ctx, cancel := context.WithTimeout(context.Background(), config.ContextDBTimeout*time.Second)
-	// не забываем освободить ресурс
 	defer cancel()
 
 	config.DB, config.DBFlag = SetUpDataStorage(ctx, connStr, storeFile, restoreValue, storeInt, storeParameter)
@@ -388,18 +392,12 @@ func main() {
 		log.Println("Stopped serving new connections.")
 	}()
 
-	// определяем порт для сервера
 	listen, err := net.Listen("tcp", *grpcPort)
 	if err != nil {
 		log.Fatalf("GRPC server error: %v", err)
 	}
-	// создаём gRPC-сервер без зарегистрированной службы
 	s := grpc.NewServer()
-	// регистрируем сервис
 	pb.RegisterGrpcServer(s, &GrpcServer{key: config.Key, dB: config.DB, dBFlag: config.DBFlag})
-
-	log.Println("Сервер gRPC начал работу")
-	// получаем запрос gRPC
 	if err := s.Serve(listen); err != nil {
 		log.Fatalf("GRPC server error: %v", err)
 	}

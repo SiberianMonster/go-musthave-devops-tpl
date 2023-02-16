@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"google.golang.org/grpc"
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/handlers"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
@@ -23,6 +26,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 func TestParseStoreInterval(t *testing.T) {
@@ -190,6 +195,32 @@ func TestSetUpConfiguration(t *testing.T) {
 			_, vErr := SetUpConfiguration(&tt.fileName, serverConfig)
 			assert.Equal(t, tt.wantErr, vErr)
 
+		})
+	}
+}
+
+func TestParseTrustedSub(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		subnetwork string
+		wantErr    error
+	}{
+		{
+			name:       "trial run",
+			subnetwork: "35.132.199.128/27",
+			wantErr:    nil,
+		},
+		{
+			name:       "wrong input",
+			subnetwork: "xxx",
+			wantErr:    errors.New("could not parse trustedSubnet value"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, vErr := ParseTrustedSub(&tt.subnetwork)
+			assert.Equal(t, tt.wantErr, vErr)
 		})
 	}
 }
@@ -380,6 +411,24 @@ func TestInitializeRouter(t *testing.T) {
 	}
 }
 
+func TestParseEnvVariables(t *testing.T) {
+
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "trial run",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defaultValue := ""
+			ParseEnvVariables(&defaultValue, &defaultValue, &defaultValue)
+
+		})
+	}
+}
+
 func TestShutdownGracefully(t *testing.T) {
 
 	tests := []struct {
@@ -398,6 +447,295 @@ func TestShutdownGracefully(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.srv = &http.Server{}
 			ShutdownGracefully(tt.srv, storeFile, connStr)
+		})
+	}
+}
+
+func TestGrpcUpdate(t *testing.T) {
+	ctx := context.Background()
+
+	buffer := 101024 * 1024
+	lis := bufconn.Listen(buffer)
+
+	baseServer := grpc.NewServer()
+	pb.RegisterGrpcServer(baseServer, &GrpcServer{key: "", dB: nil, dBFlag: false})
+	go func() {
+		if err := baseServer.Serve(lis); err != nil {
+			log.Printf("error serving server: %v", err)
+		}
+	}()
+
+	conn, err := grpc.DialContext(ctx, "",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("error connecting to server: %v", err)
+	}
+
+	closer := func() {
+		err := lis.Close()
+		if err != nil {
+			log.Printf("error closing listener: %v", err)
+		}
+		baseServer.Stop()
+	}
+	defer closer()
+
+	client := pb.NewGrpcClient(conn)
+
+	type expectation struct {
+		out *pb.UpdateResponse
+		err error
+	}
+
+	tests := map[string]struct {
+		metrics  *pb.Metrics
+		expected expectation
+	}{
+		"Must_Success_Gauge": {
+			metrics: &pb.Metrics{
+				Id:    "TotalMemAlloc",
+				Mtype: pb.Metrics_GAUGE,
+				Delta: 0,
+				Value: 1.11,
+				Hash:  "",
+			},
+			expected: expectation{
+				out: &pb.UpdateResponse{
+					Error: "",
+				},
+				err: nil,
+			},
+		},
+		"Must_Success_Counter": {
+			metrics: &pb.Metrics{
+				Id:    "Counter",
+				Mtype: pb.Metrics_COUNTER,
+				Delta: 1,
+				Value: 0.0,
+				Hash:  "",
+			},
+			expected: expectation{
+				out: &pb.UpdateResponse{
+					Error: "",
+				},
+				err: nil,
+			},
+		},
+		"Empty_ID": {
+			metrics: &pb.Metrics{
+				Id:    "",
+				Mtype: pb.Metrics_GAUGE,
+				Delta: 0,
+				Value: 0,
+				Hash:  "",
+			},
+			expected: expectation{
+				out: &pb.UpdateResponse{
+					Error: "empty metrics ID",
+				},
+				err: errors.New("rpc error: code = Unknown desc = empty metrics ID"),
+			},
+		},
+	}
+
+	for scenario, tt := range tests {
+		t.Run(scenario, func(t *testing.T) {
+			in := &pb.UpdateRequest{Metrics: tt.metrics}
+			_, err := client.Update(ctx, in)
+			if err != nil {
+				if tt.expected.err.Error() != err.Error() {
+					t.Errorf("Err -> \nWant: %q\nGot: %q\n", tt.expected.err, err)
+				}
+			}
+		})
+	}
+}
+
+func TestGrpcUpdateHash(t *testing.T) {
+	ctx := context.Background()
+
+	buffer := 101024 * 1024
+	lis := bufconn.Listen(buffer)
+
+	baseServer := grpc.NewServer()
+	pb.RegisterGrpcServer(baseServer, &GrpcServer{key: "xxx", dB: nil, dBFlag: false})
+	go func() {
+		if err := baseServer.Serve(lis); err != nil {
+			log.Printf("error serving server: %v", err)
+		}
+	}()
+
+	conn, err := grpc.DialContext(ctx, "",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("error connecting to server: %v", err)
+	}
+
+	closer := func() {
+		err := lis.Close()
+		if err != nil {
+			log.Printf("error closing listener: %v", err)
+		}
+		baseServer.Stop()
+	}
+	defer closer()
+
+	client := pb.NewGrpcClient(conn)
+
+	type expectation struct {
+		out *pb.UpdateResponse
+		err error
+	}
+
+	tests := map[string]struct {
+		metrics  *pb.Metrics
+		expected expectation
+	}{
+		"Must_Success_Gauge": {
+			metrics: &pb.Metrics{
+				Id:    "TotalMemAlloc",
+				Mtype: pb.Metrics_GAUGE,
+				Delta: 0,
+				Value: 1.11,
+				Hash:  "yyy",
+			},
+			expected: expectation{
+				out: &pb.UpdateResponse{
+					Error: "hashing values do not match",
+				},
+				err: errors.New("rpc error: code = Unknown desc = hashing values do not match"),
+			},
+		},
+	}
+
+	for scenario, tt := range tests {
+		t.Run(scenario, func(t *testing.T) {
+			in := &pb.UpdateRequest{Metrics: tt.metrics}
+			_, err := client.Update(ctx, in)
+			if err != nil {
+				if tt.expected.err.Error() != err.Error() {
+					t.Errorf("Err -> \nWant: %q\nGot: %q\n", tt.expected.err, err)
+				}
+			}
+		})
+	}
+}
+
+func TestGrpcValue(t *testing.T) {
+	ctx := context.Background()
+
+	buffer := 101024 * 1024
+	lis := bufconn.Listen(buffer)
+
+	baseServer := grpc.NewServer()
+	pb.RegisterGrpcServer(baseServer, &GrpcServer{key: "", dB: nil, dBFlag: false})
+	go func() {
+		if err := baseServer.Serve(lis); err != nil {
+			log.Printf("error serving server: %v", err)
+		}
+	}()
+
+	conn, err := grpc.DialContext(ctx, "",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Printf("error connecting to server: %v", err)
+	}
+
+	closer := func() {
+		err := lis.Close()
+		if err != nil {
+			log.Printf("error closing listener: %v", err)
+		}
+		baseServer.Stop()
+	}
+	defer closer()
+
+	client := pb.NewGrpcClient(conn)
+
+	testInputGauge := &pb.UpdateRequest{Metrics: &pb.Metrics{
+		Id:    "TotalMemAlloc",
+		Mtype: pb.Metrics_GAUGE,
+		Delta: 0,
+		Value: 1.11,
+		Hash:  "",
+	},
+	}
+	testInputCounter := &pb.UpdateRequest{Metrics: &pb.Metrics{
+		Id:    "Counter",
+		Mtype: pb.Metrics_COUNTER,
+		Delta: 1,
+		Value: 0.0,
+		Hash:  "",
+	},
+	}
+	_, err = client.Update(ctx, testInputGauge)
+	_, err = client.Update(ctx, testInputCounter)
+
+	type expectation struct {
+		out *pb.Metrics
+		err error
+	}
+
+	tests := map[string]struct {
+		metricsname string
+		expected    expectation
+	}{
+		"Must_Success_Gauge": {
+			metricsname: "TotalMemAlloc",
+			expected: expectation{
+				out: &pb.Metrics{
+					Id:    "TotalMemAlloc",
+					Mtype: pb.Metrics_GAUGE,
+					Delta: 0,
+					Value: 1.11,
+					Hash:  "",
+				},
+				err: nil,
+			},
+		},
+		"Must_Success_Counter": {
+			metricsname: "Counter",
+			expected: expectation{
+				out: &pb.Metrics{
+					Id:    "Counter",
+					Mtype: pb.Metrics_COUNTER,
+					Delta: 1,
+					Value: 0.0,
+					Hash:  "",
+				},
+				err: nil,
+			},
+		},
+		"Missing Value": {
+			metricsname: "TotalMemAlloc2",
+			expected: expectation{
+				out: &pb.Metrics{
+					Id:    "",
+					Mtype: pb.Metrics_GAUGE,
+					Delta: 0,
+					Value: 0,
+					Hash:  "",
+				},
+				err: errors.New("rpc error: code = Unknown desc = missing params value"),
+			},
+		},
+	}
+
+	for scenario, tt := range tests {
+		t.Run(scenario, func(t *testing.T) {
+			in := &pb.ValueRequest{Metricsname: tt.metricsname}
+			_, err := client.Value(ctx, in)
+			if err != nil {
+				if tt.expected.err.Error() != err.Error() {
+					t.Errorf("Err -> \nWant: %q\nGot: %q\n", tt.expected.err, err)
+				}
+			}
 		})
 	}
 }

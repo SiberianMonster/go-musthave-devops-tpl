@@ -15,10 +15,10 @@ import (
 	"errors"
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"net/url"
-	"net"
 	"os"
 	"os/signal"
 	"reflect"
@@ -29,13 +29,13 @@ import (
 	"syscall"
 	"time"
 
+	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/config"
 	"github.com/SiberianMonster/go-musthave-devops-tpl/internal/metrics"
 	"github.com/shirou/gopsutil/v3/mem"
-	pb "github.com/SiberianMonster/go-musthave-devops-tpl/cmd/server/proto"
 
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var host, key, buildVersion, buildDate, buildCommit, cryptoKey, jsonFile, grpcPort *string
@@ -332,21 +332,19 @@ func ReportUpdateBatch(pollCounterVar int, reportCounterVar int) error {
 	}
 }
 
-
 // GetOutboundIP allows to retrieve preferred outbound ip of the machine
 func GetOutboundIP() net.IP {
-    conn, err := net.Dial("udp", "8.8.8.8:80")
-    if err != nil {
-        log.Printf("Error happened when dialing udp for IP address. Err: %s", err)
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Printf("Error happened when dialing udp for IP address. Err: %s", err)
 		return nil
-    }
-    defer conn.Close()
+	}
+	defer conn.Close()
 
-    localAddr := conn.LocalAddr().(*net.UDPAddr)
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
 
-    return localAddr.IP
+	return localAddr.IP
 }
-
 
 func init() {
 
@@ -406,12 +404,12 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT)
 
 	conn, err := grpc.Dial(*grpcPort, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-    _ = pb.NewGrpcClient(conn)
+	_ = pb.NewGrpcClient(conn)
 
 loop:
 	for {
