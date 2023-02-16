@@ -107,15 +107,15 @@ func MetricsHash(m Metrics, key string) string {
 
 	var strHash string
 	var err error
-	if m.MType == Counter {
+	if m.MType == "counter" {
 		strHash, err = httpp.Hash(fmt.Sprintf("%s:counter:%d", m.ID, *m.Delta), key)
 		if err != nil {
-			log.Fatalf("Error happened when hashing received value. Err: %s", err)
+			log.Printf("Error happened when hashing received value. Err: %s", err)
 		}
 	} else {
 		strHash, err = httpp.Hash(fmt.Sprintf("%s:gauge:%f", m.ID, *m.Value), key)
 		if err != nil {
-			log.Fatalf("Error happened when hashing received value. Err: %s", err)
+			log.Printf("Error happened when hashing received value. Err: %s", err)
 		}
 	}
 	return strHash

@@ -1,0 +1,52 @@
+
+
+syntax = "proto3";
+
+
+package main;
+
+
+option go_package = "./";
+
+
+message Metrics {
+  string id = 1; 
+
+  enum MType {
+      INVALID = 0;
+      GAUGE = 1;
+      COUNTER = 2;
+  }
+
+  MType mtype = 2;
+  int64 delta = 3;
+  double value = 4;
+  string hash = 5;
+
+}
+
+
+service Grpc {
+  rpc Update(UpdateRequest) returns (UpdateResponse);
+  rpc Value(ValueRequest) returns (ValueResponse);
+} 
+
+
+message UpdateRequest {
+  Metrics metrics = 1;
+}
+
+
+message UpdateResponse {
+  string error = 1; // ошибка
+}
+
+
+message ValueRequest {
+  string metricsname = 1;
+}
+
+
+message ValueResponse {
+  Metrics metrics = 1;
+}

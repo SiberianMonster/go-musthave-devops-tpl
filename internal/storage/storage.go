@@ -22,6 +22,27 @@ import (
 
 var err error
 
+// SetUpDbConnection initializes database connection.
+func SetUpDBConnection(ctx context.Context, connStr *string) (*sql.DB, bool) {
+
+	log.Println("Start db connection.")
+	db, err := sql.Open("postgres", *connStr)
+	if err != nil {
+		log.Printf("Error happened when initiating connection to the db. Err: %s", err)
+		return nil, false
+	}
+	log.Println("Connection initialised successfully.")
+	_, err = db.ExecContext(ctx,
+		"CREATE TABLE IF NOT EXISTS metrics (metrics_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name text NOT NULL, delta bigint, value double precision)")
+	if err != nil {
+		log.Printf("Error happened when creating sql table. Err: %s", err)
+		return nil, false
+
+	}
+	log.Println("Initialised data table.")
+	return db, true
+}
+
 // RepositoryUpdate function saves received system metrics to a SQL database if it is enabled
 // or updates metrics container that is later exported to the json-file.
 func RepositoryUpdate(mp metrics.Metrics, storeDB *sql.DB, dbFlag bool, ctx context.Context) error {
@@ -160,7 +181,7 @@ func StaticFileSave(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_WRONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
 	}
 	writer := bufio.NewWriter(file)
 
@@ -172,11 +193,11 @@ func StaticFileSave(storeFile string) {
 	if len(data) > 3 {
 		log.Print(string(data))
 		if _, err := writer.Write(data); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 		}
 
 		if err := writer.WriteByte('\n'); err != nil {
-			log.Fatalf("Error happened when writing data to storage file. Err: %s", err)
+			log.Printf("Error happened when writing data to storage file. Err: %s", err)
 		}
 		writer.Flush()
 	}
@@ -190,7 +211,7 @@ func StaticFileUpload(storeFile string) {
 
 	file, err := os.OpenFile(storeFile, os.O_RDONLY|os.O_CREATE, 0777)
 	if err != nil {
-		log.Fatalf("Error happened in JSON file opening. Err: %s", err)
+		log.Printf("Error happened in JSON file opening. Err: %s", err)
 
 	} else {
 		log.Printf("Uploading data from JSON")
@@ -211,7 +232,7 @@ func StaticFileUpload(storeFile string) {
 
 }
 
-// DBSave function performs the operation of inserting new system metrics to a SQL database with a query. 
+// DBSave function performs the operation of inserting new system metrics to a SQL database with a query.
 func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) error {
 
 	_, err := storeDB.ExecContext(ctx, "INSERT INTO metrics (name, value, delta) VALUES ($1, $2, $3);",
@@ -227,7 +248,7 @@ func DBSave(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) er
 	return nil
 }
 
-// DBSaveBatch function performs the operation of inserting a batch of system metrics to a SQL database with a transaction. 
+// DBSaveBatch function performs the operation of inserting a batch of system metrics to a SQL database with a transaction.
 func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Context) error {
 
 	// шаг 1 — объявляем транзакцию
@@ -260,7 +281,7 @@ func DBSaveBatch(storeDB *sql.DB, metricsObj []metrics.Metrics, ctx context.Cont
 	return tx.Commit()
 }
 
-// DBUpload function performs the operation of retrieving system metrics from a SQL database with a query. 
+// DBUpload function performs the operation of retrieving system metrics from a SQL database with a query.
 func DBUpload(storeDB *sql.DB, metricsObj metrics.Metrics, ctx context.Context) (metrics.Metrics, error) {
 
 	var uploadedValue *float64
@@ -299,7 +320,7 @@ func DBCheck(storeDB *sql.DB, name string, ctx context.Context) bool {
 	var ok bool
 	err := storeDB.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM metrics WHERE name = ($1));", name).Scan(&ok)
 	if err != nil && err != sql.ErrNoRows {
-		log.Fatalf("Error happened when extracting entries from sql table. Err: %s", err)
+		log.Printf("Error happened when extracting entries from sql table. Err: %s", err)
 	}
 	log.Printf("checked for metrics in DB")
 	return ok
